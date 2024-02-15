@@ -1,0 +1,4 @@
+name: another-gui-plugin
+version: '${project.version}'
+main: me.katanya04.anotherguiplugin.InventoryMenuPlugin
+author: katanya04
