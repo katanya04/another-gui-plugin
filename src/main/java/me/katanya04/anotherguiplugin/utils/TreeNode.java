@@ -1,4 +1,4 @@
-package me.katanya04.anotherguiplugin.Utils;
+package me.katanya04.anotherguiplugin.utils;
 
 import java.util.Iterator;
 import java.util.LinkedList;
@@ -12,6 +12,20 @@ public class TreeNode<T, U extends TreeNode<T, U>> implements Iterable<TreeNode<
     public TreeNode(T data) {
         this.data = data;
         this.children = new LinkedList<>();
+    }
+    public void copy(TreeNode<T, U> node) {
+        this.data = node.data;
+        recursiveCopyChildren(this, node);
+    }
+
+    protected void recursiveCopyChildren(TreeNode<T, U> destination, TreeNode<T, U> sender) {
+        int i = 0;
+        for (TreeNode<T, U> node : sender.children) {
+            if (destination.numChildren() <= i)
+                destination.addChild(new TreeNode<>(node.getData()));
+            destination.getChild(i).copy(node);
+            i++;
+        }
     }
 
     public TreeNode<T, U> addChild(T child) {
@@ -43,6 +57,18 @@ public class TreeNode<T, U extends TreeNode<T, U>> implements Iterable<TreeNode<
 
     public TreeNode<T, U> getChild(int n) {
         return children.get(n);
+    }
+
+    public TreeNode<T, U> getChildGivenData(T data) {
+        List<TreeNode<T, U>> children = getChildren();
+        for (TreeNode<T, U> node : children)
+            if (data.equals(node.data))
+                return node;
+        return null;
+    }
+
+    public boolean removeChild(TreeNode<T, U> node) {
+        return children.remove(node);
     }
 
     public TreeNode<T, U> getParent() {

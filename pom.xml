@@ -40,6 +40,14 @@
           </execution>
         </executions>
       </plugin>
+      <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-jar-plugin</artifactId>
+          <version>2.3.1</version>
+          <configuration>
+              <outputDirectory>C:\paper 1.8.8\plugins</outputDirectory>
+          </configuration>
+      </plugin>
     </plugins>
     <resources>
       <resource>
@@ -58,14 +66,23 @@
           <id>sonatype</id>
           <url>https://oss.sonatype.org/content/groups/public/</url>
       </repository>
+      <repository>
+          <id>dmulloy2-repo</id>
+          <url>https://repo.dmulloy2.net/repository/public/</url>
+      </repository>
   </repositories>
 
   <dependencies>
       <dependency>
           <groupId>org.spigotmc</groupId>
-          <artifactId>spigot-api</artifactId>
+          <artifactId>spigot</artifactId>
           <version>1.8.8-R0.1-SNAPSHOT</version>
           <scope>provided</scope>
+      </dependency>
+      <dependency>
+          <groupId>com.comphenix.protocol</groupId>
+          <artifactId>ProtocolLib</artifactId>
+          <version>5.1.0</version>
       </dependency>
   </dependencies>
 </project>

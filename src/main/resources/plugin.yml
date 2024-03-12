@@ -1,4 +1,11 @@
 name: another-gui-plugin
+depend: [ProtocolLib]
 version: '${project.version}'
-main: me.katanya04.anotherguiplugin.InventoryMenuPlugin
+main: me.katanya04.anotherguiplugin.AnotherGUIPlugin
 author: katanya04
+
+commands:
+  menus:
+    description: command used to detect clicking events in a book menu
+  menusDebug:
+    aliases: menud
