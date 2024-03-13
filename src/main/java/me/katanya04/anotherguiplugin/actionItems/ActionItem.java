@@ -32,6 +32,7 @@ public class ActionItem extends ItemStack {
     protected Consumer<Player> onInteract;
     protected Consumer<PlayerDropItemEvent> onThrowBehaviour;
     private final String name;
+    protected InventoryMenu parent;
     public ActionItem(ItemStack itemStack, Consumer<Player> onInteract, String uniqueName) {
         this(pl -> itemStack, onInteract, uniqueName);
     }
@@ -80,11 +81,19 @@ public class ActionItem extends ItemStack {
     }
 
     public static boolean isActionItem(ItemStack itemStack) {
-        return Utils.containsNBT(itemStack, nameKeyString);
+        return itemStack instanceof ActionItem || Utils.containsNBT(itemStack, nameKeyString);
     }
 
     public static ActionItem getActionItem(ItemStack itemStack) {
-        return actionItems.get(ActionItem.getName(itemStack));
+        return itemStack instanceof ActionItem ? (ActionItem) itemStack : actionItems.get(ActionItem.getName(itemStack));
+    }
+
+    public InventoryMenu getParent() {
+        return parent;
+    }
+
+    public void setParent(InventoryMenu parent) {
+        this.parent = parent;
     }
 
     public static class EventListener implements Listener {
@@ -93,6 +102,7 @@ public class ActionItem extends ItemStack {
             ActionItem actionItem;
             if (!(e.getAction().equals(Action.RIGHT_CLICK_AIR) || e.getAction().equals(Action.RIGHT_CLICK_BLOCK)) || (actionItem = ActionItem.getActionItem(e.getItem())) == null)
                 return;
+            actionItem.setParent(null);
             e.setCancelled(true);
             actionItem.interact(e.getPlayer());
         }
@@ -102,6 +112,8 @@ public class ActionItem extends ItemStack {
             ActionItem actionItem;
             if (e.getClick() == ClickType.LEFT && (actionItem = ActionItem.getActionItem(e.getCurrentItem())) != null) {
                 e.setCancelled(true);
+                if (e.getClickedInventory().getHolder() instanceof InventoryMenu)
+                    actionItem.setParent((InventoryMenu) e.getClickedInventory().getHolder());
                 actionItem.interact((Player) e.getWhoClicked());
             }
         }

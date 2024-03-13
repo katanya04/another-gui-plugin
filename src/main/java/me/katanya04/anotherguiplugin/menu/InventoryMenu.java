@@ -12,6 +12,7 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
+import org.bukkit.event.inventory.InventoryOpenEvent;
 import org.bukkit.event.inventory.InventoryType;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.InventoryHolder;
@@ -36,6 +37,7 @@ public class InventoryMenu implements Menu<Inventory>, InventoryHolder {
     public enum SaveOption {NONE, GLOBAL, INDIVIDUAL};
     protected SaveOption saveChanges;
     protected Set<Integer> protectedSlots;
+    protected Consumer<InventoryOpenEvent> onOpenBehaviour;
     protected Consumer<InventoryClickEvent> onClickBehaviour;
     protected Consumer<InventoryCloseEvent> onCloseBehaviour;
     protected List<Inventory> currentlyOpenCopies;
@@ -81,18 +83,8 @@ public class InventoryMenu implements Menu<Inventory>, InventoryHolder {
         ItemStack[] contents;
         if (player == null || this.saveChanges != SaveOption.INDIVIDUAL ||
                 (contents = getSavedMenu(Utils.getPlayerUUID(player.getName()))) == null)
-            contents = this.generateContents(player);
+            contents = this.contents;
         return contents;
-    }
-
-    protected ItemStack[] generateContents(Player player) {
-        ItemStack[] toret = new ItemStack[contents.length];
-        for (int i = 0; i < contents.length; i++) {
-            if (contents[i] instanceof ActionItem)
-                toret[i] = ActionItem.getActionItem(contents[i]).getItemStack(player);
-            else toret[i] = contents[i];
-        }
-        return toret;
     }
 
     @Override
@@ -155,6 +147,10 @@ public class InventoryMenu implements Menu<Inventory>, InventoryHolder {
         return newInventory(null);
     }
 
+    public void setOnOpenBehaviour(Consumer<InventoryOpenEvent> onOpenBehaviour) {
+        this.onOpenBehaviour = onOpenBehaviour;
+    }
+
     public void setOnCloseBehaviour(Consumer<InventoryCloseEvent> onCloseBehaviour) {
         this.onCloseBehaviour = onCloseBehaviour;
     }
@@ -207,6 +203,19 @@ public class InventoryMenu implements Menu<Inventory>, InventoryHolder {
     }
 
     public static class EventListener implements Listener {
+        @EventHandler
+        public void onInventoryOpen(InventoryOpenEvent e) {
+            if (e.getInventory().getHolder() instanceof InventoryMenu) {
+                InventoryMenu inv = ((InventoryMenu) e.getInventory().getHolder());
+                for (int i = 0; i < inv.contents.length; i++) {
+                    if (ActionItem.isActionItem(inv.contents[i]))
+                        inv.contents[i] = ActionItem.getActionItem(inv.contents[i]).getItemStack(e.getPlayer());
+                }
+                if (inv.onOpenBehaviour != null)
+                    inv.onOpenBehaviour.accept(e);
+            }
+        }
+
         @EventHandler
         public void onInventoryClick(InventoryClickEvent e) {
             if (e.getClickedInventory() != null && e.getInventory().getHolder() instanceof InventoryMenu) {

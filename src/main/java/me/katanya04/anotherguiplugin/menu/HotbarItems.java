@@ -1,5 +1,6 @@
 package me.katanya04.anotherguiplugin.menu;
 
+import me.katanya04.anotherguiplugin.actionItems.ActionItem;
 import me.katanya04.anotherguiplugin.utils.Utils;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
@@ -27,7 +28,8 @@ public class HotbarItems {
         int i = 0;
         for (ItemStack item : this.contents)
             if (canBeGiven == null || canBeGiven.apply(player, item))
-                player.getInventory().setItem(i++, item);
+                player.getInventory().setItem(i++, ActionItem.isActionItem(item) ?
+                        ActionItem.getActionItem(item).getItemStack(player) : item);
     }
     public ItemStack getItem(int slot) {
         return this.contents[slot];
