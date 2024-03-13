@@ -13,7 +13,6 @@ import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
-import org.bukkit.event.inventory.InventoryType;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.map.MinecraftFont;
 
@@ -157,12 +156,12 @@ public class BookMenu implements Menu<BookMenu.Field> {
     protected List<TextComponent> buildPagesFromField(Field entries, String path) {
         int indentationLevel = path.split("\\.").length - 2;
         boolean isRoot = entries.getParent() == null;
+        boolean isLeafNode = entries.numChildren() == 0;
         List<TextComponent> toret = new ArrayList<>();
         String entryValue = getIndentation(indentationLevel) + entries.getData();
         TextComponent key = new TextComponent();
         if (!isRoot)
             toret.add(key);
-        boolean isLeafNode = entries.numChildren() == 0;
         if (!isLeafNode) { //the field contains more fields
             entryValue = "§o" + entryValue + "§r§0: ";
             if (entries.isRemovableFromBook() && !isRoot)
@@ -187,27 +186,7 @@ public class BookMenu implements Menu<BookMenu.Field> {
         return toret;
     }
 
-    protected Field getFieldFromPath(String path) {
-        String[] pathSplit;
-        String root;
-        {
-            String[] pathSplit1 = path.split("\\.");
-            root = pathSplit1[0];
-            pathSplit = Arrays.copyOfRange(pathSplit1, 1, pathSplit1.length);
-        }
-        Field field = contents;
-        if (!field.getId().equals(root))
-            return null;
-        for (String value : pathSplit) {
-            field = field.getChildGivenId(value);
-            if (field == null)
-                return null;
-        }
-        return field;
-    }
-
     public static class Field extends TreeNode<String, Field> {
-        private static int ids = 0;
         private Function<Object, Boolean> validCheckFunction;
         public enum OnModifyActions{NONE, OPEN_ANVIL, OPEN_INV, CUSTOM}
         private OnModifyActions onModify;
@@ -216,23 +195,10 @@ public class BookMenu implements Menu<BookMenu.Field> {
         private boolean canAddMoreFields;
         private int maxNumberOfFields;
         private String modifyPermission;
-        private final String id;
         private InventoryMenu invMenu;
-        private boolean openBookOnCloseInv;
         private static final String FIELD_PATH = "FieldPath";
         public static final String OPEN_INV_MSG = "[Open menu]";
-        private static final AnvilMenu anvilMenu = new AnvilMenu("anvilMenu", false, InventoryMenu.SaveOption.NONE,
-                args -> {
-            Object[] argsArray = (Object[]) args;
-            Field f = (Field) argsArray[0];
-            String bookId = (String) argsArray[1];
-            return new ItemStack[]{Utils.setItemNBT(Utils.setName(new ItemStack(Material.IRON_SPADE),
-                    f.getData().isEmpty() ?
-                            "New value" : f.getData()),
-                    FIELD_PATH, f.getPath(bookId)),
-                    f.parent != null && f.parent.numChildren() > 1 ?
-                    Utils.setName(new ItemStack(Material.IRON_SPADE), "Copy from previous field") : null};
-                });
+        private static final AnvilMenu anvilMenu = new AnvilMenu("anvilMenu", false, InventoryMenu.SaveOption.NONE, null, null);
         static {
             anvilMenu.setOnClickBehaviour(event -> {
                 String path = Utils.getNBT(event.getInventory().getItem(0), FIELD_PATH);
@@ -245,7 +211,7 @@ public class BookMenu implements Menu<BookMenu.Field> {
                 BookMenu book = getBookById(bookId);
                 if (book == null)
                     return;
-                Field field = book.getFieldFromPath(path.split("/")[1]);
+                Field field = book.contents.getNodeFromPath(path.split("/")[1]).cast();
                 if (event.getRawSlot() == 2) {
                     field.setValue(event.getClickedInventory().getItem(2).getItemMeta().getDisplayName());
                     event.getClickedInventory().setItem(1, null);
@@ -279,8 +245,6 @@ public class BookMenu implements Menu<BookMenu.Field> {
             this.maxNumberOfFields = maxNumberOfFields;
             this.modifyPermission = permission;
             this.onModify = onModify;
-            this.openBookOnCloseInv = true;
-            this.id = String.valueOf(ids++);
         }
         protected void copyFrom(Field field) {
             this.data = field.data;
@@ -292,7 +256,6 @@ public class BookMenu implements Menu<BookMenu.Field> {
             this.maxNumberOfFields = field.maxNumberOfFields;
             this.modifyPermission = field.modifyPermission;
             this.invMenu = field.invMenu;
-            this.openBookOnCloseInv = field.openBookOnCloseInv;
             recursiveCopyChildren(this, field);
         }
         protected void recursiveCopyChildren(Field destination, Field sender) {
@@ -305,25 +268,7 @@ public class BookMenu implements Menu<BookMenu.Field> {
             }
         }
         protected String getPath(String bookId) {
-            StringBuilder path = new StringBuilder();
-            if (bookId != null)
-                path.append(bookId).append("/");
-            Field aux = this;
-            List<String> reversePath = new ArrayList<>();
-            while (aux != null) {
-                reversePath.add(aux.id);
-                if (aux.parent != null)
-                    aux = aux.parent.cast();
-                else
-                    aux = null;
-            }
-            ListIterator<String> li = reversePath.listIterator(reversePath.size());
-            while(li.hasPrevious()) {
-                path.append(li.previous());
-                if (li.hasPrevious())
-                    path.append(".");
-            }
-            return path.toString();
+            return  bookId != null ? bookId + "/" + getPath() : getPath();
         }
         public void setValidCheckFunction(Function<Object, Boolean> validCheckFunction) {
             this.validCheckFunction = validCheckFunction;
@@ -353,21 +298,8 @@ public class BookMenu implements Menu<BookMenu.Field> {
         public OnModifyActions getOnModify() {
             return onModify;
         }
-        public String getId() {
-            return id;
-        }
         public List<Field> getChildrenField() {
             return children.stream().map(o -> (Field) o).collect(Collectors.toList());
-        }
-        public Field getChildGivenId(String id) {
-            List<Field> children = getChildrenField();
-            for (Field node : children)
-                if (id.equals(node.id))
-                    return node;
-            return null;
-        }
-        public boolean isOpenBookOnCloseInv() {
-            return openBookOnCloseInv;
         }
         public void setCanAddMoreFields(boolean canAddMoreFields) {
             this.canAddMoreFields = canAddMoreFields;
@@ -389,9 +321,6 @@ public class BookMenu implements Menu<BookMenu.Field> {
         }
         public void setInvMenu(InventoryMenu invMenu) {
             this.invMenu = invMenu;
-        }
-        public void setOpenBookOnCloseInv(boolean openBookOnCloseInv) {
-            this.openBookOnCloseInv = openBookOnCloseInv;
         }
         public InventoryMenu getMenu() {
             switch (onModify) {
@@ -433,7 +362,7 @@ public class BookMenu implements Menu<BookMenu.Field> {
             BookMenu book = getBookById(id);
             if (book == null)
                 return false;
-            Field field = book.getFieldFromPath(args[3]);
+            Field field = book.contents.getNodeFromPath(args[3]).cast();
             if (field == null)
                 return false;
             ActionType action;
@@ -447,15 +376,16 @@ public class BookMenu implements Menu<BookMenu.Field> {
             switch (action) {
                 case MODIFY:
                     InventoryMenu invMenu = field.getMenu();
-                    if (invMenu != null) {
-                        invMenu.setOnCloseBehaviour(event -> {
-                            if (invMenu.invType == InventoryType.ANVIL)
-                                event.getInventory().setItem(1, null);
-                            if (field.openBookOnCloseInv)
-                                Menu.openMenuOneTickLater(player, book, false);
-                        });
-                        invMenu.openMenu(player, new Object[]{field, String.valueOf(id)});
-                    }
+                    if (invMenu == null)
+                        return false;
+                    invMenu.setParent(book);
+                    invMenu.setContents(
+                            new ItemStack[]{Utils.setItemNBT(Utils.setName(new ItemStack(Material.IRON_SPADE),
+                                    field.getData().isEmpty() ? "New value" : field.getData()), Field.FIELD_PATH,
+                                    field.getPath(String.valueOf(id))), field.getParent() != null &&
+                                    field.getParent().numChildren() > 1 ? Utils.setName(new ItemStack(
+                                            Material.IRON_SPADE), "Copy from previous field") : null
+                    });
                     break;
                 case REMOVE:
                     Field parent = field.getParent().cast();
@@ -467,13 +397,13 @@ public class BookMenu implements Menu<BookMenu.Field> {
                     field.addChild(newField);
                     InventoryMenu invMenu_ = newField.getMenu();
                     if (invMenu_ != null) {
-                        invMenu_.setOnCloseBehaviour(event -> {
-                            if (invMenu_.invType == InventoryType.ANVIL)
-                                event.getInventory().setItem(1, null);
-                            if (newField.openBookOnCloseInv)
-                                Menu.openMenuOneTickLater(player, book, false);
+                        invMenu_.setParent(book);
+                        invMenu_.setContents(
+                                new ItemStack[]{Utils.setItemNBT(Utils.setName(new ItemStack(Material.IRON_SPADE),
+                                                "New value"), Field.FIELD_PATH, newField.getPath(String.valueOf(id))),
+                                newField.getParent().numChildren() > 1 ? Utils.setName(new ItemStack(Material.IRON_SPADE),
+                                        "Copy from previous field") : null
                         });
-                        invMenu_.openMenu(player, new Object[]{newField, String.valueOf(id)});
                     }
                     break;
             }

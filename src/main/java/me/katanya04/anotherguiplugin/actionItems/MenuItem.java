@@ -9,8 +9,8 @@ import org.bukkit.inventory.ItemStack;
  */
 public class MenuItem<T extends Menu> extends ActionItem {
     protected T menu;
-    public MenuItem(ItemStack itemStack, T menu, String name) {
-        super(itemStack, menu::openMenu, name);
+    public MenuItem(ItemStack itemStack, T menu, String uniqueName) {
+        super(itemStack, menu::openMenu, uniqueName);
         this.menu = menu;
     }
 

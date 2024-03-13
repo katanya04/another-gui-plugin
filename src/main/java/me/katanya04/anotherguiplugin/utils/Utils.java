@@ -126,13 +126,6 @@ public class Utils {
         return UUID.fromString(String.format("%s-%s-%s-%s-%s", uuid.substring(0,8), uuid.substring(8,12), uuid.substring(12,16), uuid.substring(16,20), uuid.substring(20,32)));
     }
 
-    public static Map<String, String> getActionItemMap(int id, String name) {
-        Map<String, String> toret = new HashMap<>();
-        toret.put(ActionItem.IDKeyString, String.valueOf(id));
-        toret.put(ActionItem.nameKeyString, name);
-        return toret;
-    }
-
     public static ItemStack setItemNBT(ItemStack item, String key, String value) {
         ItemStack craftItemStack = MinecraftReflection.getBukkitItemStack(item);
         NbtCompound compound = NbtFactory.asCompound(NbtFactory.fromItemTag(MinecraftReflection.getBukkitItemStack(item)));

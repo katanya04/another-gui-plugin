@@ -15,6 +15,7 @@ public abstract class ListItem<T> extends ActionItem {
     private final List<T> list;
     protected int index;
     protected final boolean nullOption;
+    protected int defaultValueIndex;
     public ListItem(ItemStack itemStack, List<T> list, int index, boolean nullOption, Consumer<Player> onInteract, String name) {
         super(itemStack, onInteract, name);
         this.list = list;
@@ -28,20 +29,32 @@ public abstract class ListItem<T> extends ActionItem {
                 this.index++;
             Utils.setLore(this, "§r§f" + getName());
         });
+        this.defaultValueIndex = 0;
+    }
+    private boolean isValidIndex(int index) {
+        if (index >= list.size())
+            return false;
+        return index >= -1 && (index >= 0 || nullOption);
+    }
+    public void setDefaultValueIndex(int defaultValueIndex) {
+        if (!isValidIndex(defaultValueIndex))
+            throw new RuntimeException();
+        this.defaultValueIndex = defaultValueIndex;
     }
     public T getCurrentItem() {
         return index >= 0 ? list.get(index) : null;
     }
     public String getName() {
-        return index >= 0 ? list.get(index).toString() : "None";
+        T item = getCurrentItem();
+        return item != null ? item.toString() : "None";
     }
     public void setIndex(int index) {
-        if (index < 0 || index >= list.size())
+        if (!isValidIndex(index))
             throw new RuntimeException();
         else
             this.index = index;
     }
     public void reset() {
-        this.index = nullOption ? -1 : 0;
+        this.index = defaultValueIndex;
     }
 }

@@ -1,10 +1,12 @@
 package me.katanya04.anotherguiplugin.utils;
 
-import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.List;
+import me.katanya04.anotherguiplugin.menu.BookMenu;
+
+import java.util.*;
 
 public class TreeNode<T, U extends TreeNode<T, U>> implements Iterable<TreeNode<T, U>> {
+    private static int ids = 0;
+    private final String id;
     protected T data;
     protected TreeNode<T, U> parent;
     protected final List<TreeNode<T, U>> children;
@@ -12,7 +14,9 @@ public class TreeNode<T, U extends TreeNode<T, U>> implements Iterable<TreeNode<
     public TreeNode(T data) {
         this.data = data;
         this.children = new LinkedList<>();
+        this.id = String.valueOf(ids++);
     }
+
     public void copy(TreeNode<T, U> node) {
         this.data = node.data;
         recursiveCopyChildren(this, node);
@@ -85,6 +89,54 @@ public class TreeNode<T, U extends TreeNode<T, U>> implements Iterable<TreeNode<
 
     public T getData() {
         return data;
+    }
+
+    public TreeNode<T, U> getRoot() {
+        TreeNode<T, U> root = this;
+        while (root.parent != null)
+            root = root.parent;
+        return root;
+    }
+
+    public String getPath() {
+        StringBuilder path = new StringBuilder();
+        TreeNode<T, U> aux = this;
+        List<String> reversePath = new ArrayList<>();
+        while (aux != null) {
+            reversePath.add(aux.id);
+            aux = aux.parent;
+        }
+        ListIterator<String> li = reversePath.listIterator(reversePath.size());
+        while(li.hasPrevious()) {
+            path.append(li.previous());
+            if (li.hasPrevious())
+                path.append(".");
+        }
+        return path.toString();
+    }
+
+    public TreeNode<T, U> getNodeFromPath(String path) {
+        String[] pathSplit = path.split("\\.");
+        TreeNode<T, U> node = this.getRoot();
+        if (!node.id.equals(pathSplit[0]))
+            return null;
+        for (int i = 1; i < pathSplit.length; i++) {
+            node = node.getChildGivenId(pathSplit[i]);
+            if (node == null)
+                return null;
+        }
+        return node;
+    }
+
+    private TreeNode<T, U> getChildGivenId(String id) {
+        for (TreeNode<T, U> node : children)
+            if (id.equals(node.id))
+                return node;
+        return null;
+    }
+
+    public String getId() {
+        return id;
     }
 
     public U cast() {

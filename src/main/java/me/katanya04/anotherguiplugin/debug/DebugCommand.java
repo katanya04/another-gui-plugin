@@ -17,15 +17,14 @@ import org.bukkit.event.inventory.InventoryType;
 import org.bukkit.inventory.ItemStack;
 
 public class DebugCommand implements CommandExecutor {
-    ItemStack[] contents = new ItemStack[]{
-    new ActionItem(new ItemStack(Material.BARRIER), HumanEntity::closeInventory),
-    new ActionItem(new ItemStack(Material.BED), player1 -> player1.getWorld().setTime(20000)),
-    new ActionItem(new ItemStack(Material.EGG), player1 -> player1.sendMessage("huevo")),
-    new ItemStack(Material.SKULL_ITEM),
-    new ItemStack(Material.WOOL)};
+    ActionItem item1 = new ActionItem(new ItemStack(Material.BARRIER), HumanEntity::closeInventory, "Barrier");
+    ActionItem item2 = new ActionItem(new ItemStack(Material.BED), player1 -> player1.getWorld().setTime(20000), "Bed");
+    ActionItem item3 = new ActionItem(new ItemStack(Material.EGG), player1 -> player1.sendMessage("huevo"), "Huevo");
+    public ItemStack[] contents = new ItemStack[]{item1, item2, item3, new ItemStack(Material.SKULL_ITEM), new ItemStack(Material.WOOL)};
     ChestMenu chestMenu1 = new ChestMenu("chestMenu1", contents, true, InventoryMenu.SaveOption.NONE, null, null, 2, 3);
-    ChestMenu chestMenu2 = new ChestMenu("chestMenu2", (p) -> new ItemStack[]{new ItemStack(Material.POISONOUS_POTATO), new ItemStack(Material.BAKED_POTATO)}, true, InventoryMenu.SaveOption.GLOBAL, null, null, 1);
-    ChestMenu chestMenu3 = new ChestMenu("chestMenu3", (p) -> new ItemStack[]{null, Utils.setName(new ItemStack(Material.SKULL_ITEM), ((Player)p).getName())}, true, InventoryMenu.SaveOption.GLOBAL, chestMenu1, chestMenu2);
+    ChestMenu chestMenu2 = new ChestMenu("chestMenu2", new ItemStack[]{new ItemStack(Material.POISONOUS_POTATO), new ItemStack(Material.BAKED_POTATO)}, true, InventoryMenu.SaveOption.GLOBAL, null, null, 1);
+    ActionItem playerSkull = new ActionItem(pl -> Utils.setName(new ItemStack(Material.SKULL_ITEM), pl != null ? ((Player)pl).getName() : ""), null, "playerSkull");
+    ChestMenu chestMenu3 = new ChestMenu("chestMenu3", new ItemStack[]{null, playerSkull}, true, InventoryMenu.SaveOption.GLOBAL, chestMenu1, chestMenu2);
     AnvilMenu anvilMenu1 = new AnvilMenu("anvilMenu1", true, InventoryMenu.SaveOption.GLOBAL, new ItemStack(Material.PAPER), null);
     MenuItem<ChestMenu> menu1 = new MenuItem<>(new ItemStack(Material.CHEST), chestMenu1, "chestMenu1");
     MenuItem<ChestMenu> menu2 = new MenuItem<>(new ItemStack(Material.ENDER_CHEST), chestMenu2, "chestMenu2");
@@ -56,7 +55,6 @@ public class DebugCommand implements CommandExecutor {
 
         contentsField2.setOnModify(BookMenu.Field.OnModifyActions.OPEN_INV);
         contentsField2.setInvMenu(new ChestMenu("chestMenu", new ItemStack[9], true, InventoryMenu.SaveOption.GLOBAL, null, null));
-        contentsField2.setOpenBookOnCloseInv(false);
 
         contentsField1.addChild(contentsField2);
         player.getInventory().addItem(menu1, menu2, menu3, menu4, menuTest, menu5, menu6);

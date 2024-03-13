@@ -2,6 +2,7 @@ package me.katanya04.anotherguiplugin;
 
 import com.comphenix.protocol.ProtocolLibrary;
 import com.comphenix.protocol.ProtocolManager;
+import me.katanya04.anotherguiplugin.actionItems.ActionItem;
 import me.katanya04.anotherguiplugin.debug.DebugCommand;
 import me.katanya04.anotherguiplugin.menu.BookMenu;
 import me.katanya04.anotherguiplugin.utils.PlayerUUIDCache;
@@ -31,6 +32,7 @@ public final class AnotherGUIPlugin extends JavaPlugin {
             ex.printStackTrace();
         }
         getServer().getPluginManager().registerEvents(new InventoryMenu.EventListener(), AnotherGUIPlugin.plugin);
+        getServer().getPluginManager().registerEvents(new ActionItem.EventListener(), AnotherGUIPlugin.plugin);
         storage = new Config("storage.yml");
         config = new Config("config.yml");
         PlayerUUIDCache.initialize();

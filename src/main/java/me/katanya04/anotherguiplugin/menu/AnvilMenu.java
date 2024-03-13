@@ -16,12 +16,6 @@ public class AnvilMenu extends InventoryMenu {
         this(name, false, SaveOption.NONE, itemOnSlot1, itemOnSlot2);
     }
     public AnvilMenu(String name, boolean canInteract, SaveOption saveOption, ItemStack itemOnSlot1, ItemStack itemOnSlot2) {
-        this(name, canInteract, saveOption, pl -> new ItemStack[]{itemOnSlot1, itemOnSlot2});
-    }
-    public AnvilMenu(String name, Function<Object, ItemStack[]> contents) {
-        this(name, false, SaveOption.NONE, contents);
-    }
-    public AnvilMenu(String name, boolean canInteract, SaveOption saveOption, Function<Object, ItemStack[]> contents) {
-        super(name, canInteract, saveOption, InventoryType.ANVIL, contents);
+        super(name, canInteract, saveOption, InventoryType.ANVIL, new ItemStack[]{itemOnSlot1, itemOnSlot2});
     }
 }
