@@ -5,11 +5,11 @@
   <modelVersion>4.0.0</modelVersion>
 
   <groupId>me.katanya04</groupId>
-  <artifactId>another-gui-plugin</artifactId>
+  <artifactId>AnotherGUIPlugin</artifactId>
   <version>1.0</version>
   <packaging>jar</packaging>
 
-  <name>another-gui-plugin</name>
+  <name>AnotherGUIPlugin</name>
 
   <properties>
     <java.version>1.8</java.version>

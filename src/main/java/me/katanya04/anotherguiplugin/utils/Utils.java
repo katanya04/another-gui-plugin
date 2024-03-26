@@ -4,10 +4,10 @@ import com.comphenix.protocol.utility.MinecraftReflection;
 import com.comphenix.protocol.wrappers.nbt.NbtCompound;
 import com.comphenix.protocol.wrappers.nbt.NbtFactory;
 import me.katanya04.anotherguiplugin.AnotherGUIPlugin;
-import me.katanya04.anotherguiplugin.actionItems.ActionItem;
 import net.md_5.bungee.api.chat.TextComponent;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
+import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.map.MinecraftFont;
@@ -128,18 +128,18 @@ public class Utils {
 
     public static ItemStack setItemNBT(ItemStack item, String key, String value) {
         ItemStack craftItemStack = MinecraftReflection.getBukkitItemStack(item);
-        NbtCompound compound = NbtFactory.asCompound(NbtFactory.fromItemTag(MinecraftReflection.getBukkitItemStack(item)));
+        NbtCompound compound = NbtFactory.asCompound(NbtFactory.fromItemTag(craftItemStack));
         compound.put(key, value);
-        NbtFactory.setItemTag(MinecraftReflection.getBukkitItemStack(craftItemStack), compound);
+        NbtFactory.setItemTag(craftItemStack, compound);
         return craftItemStack;
     }
 
     public static ItemStack setItemNBT(ItemStack item, Map<String, String> map) {
         ItemStack craftItemStack = MinecraftReflection.getBukkitItemStack(item);
-        NbtCompound compound = NbtFactory.asCompound(NbtFactory.fromItemTag(MinecraftReflection.getBukkitItemStack(item)));
+        NbtCompound compound = NbtFactory.asCompound(NbtFactory.fromItemTag(craftItemStack));
         for (Map.Entry<String, String> entry : map.entrySet())
             compound.put(entry.getKey(), entry.getValue());
-        NbtFactory.setItemTag(MinecraftReflection.getBukkitItemStack(craftItemStack), compound);
+        NbtFactory.setItemTag(craftItemStack, compound);
         return craftItemStack;
     }
 
@@ -165,5 +165,15 @@ public class Utils {
         } catch (Exception ex) {
             return false;
         }
+    }
+
+    public static ItemStack[] getCollectionOfItems(Object obj) {
+        try {
+            if (obj instanceof Collection)
+                return ((Collection<?>) obj).stream().map(o -> (ItemStack) o).toArray(ItemStack[]::new);
+            if (obj instanceof ItemStack[])
+                return (ItemStack[]) obj;
+        } catch (ClassCastException ignored) {}
+        return null;
     }
 }

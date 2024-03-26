@@ -29,7 +29,7 @@ public class HotbarItems {
         for (ItemStack item : this.contents)
             if (canBeGiven == null || canBeGiven.apply(player, item))
                 player.getInventory().setItem(i++, ActionItem.isActionItem(item) ?
-                        ActionItem.getActionItem(item).getItemStack(player) : item);
+                        ActionItem.getActionItem(item).toItemStack(player) : item);
     }
     public ItemStack getItem(int slot) {
         return this.contents[slot];

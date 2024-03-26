@@ -10,16 +10,17 @@ import org.bukkit.scheduler.BukkitRunnable;
  */
 public interface Menu<T> {
     void openMenu(Player player);
-    void setContents(T contents);
-    T getContents();
+    void setContents(T generateContents);
+    T getGenerateContents();
     void clear();
-    static void openMenuOneTickLater(Player player, Menu invMenu, boolean closeCurrent) {
+    static void openMenuOneTickLater(Player player, Menu<?> invMenu, boolean closeCurrent) {
         if (closeCurrent)
             player.closeInventory();
         (new BukkitRunnable() {
             @Override
             public void run() {
-                invMenu.openMenu(player);
+                if (!player.isInsideVehicle())
+                    invMenu.openMenu(player);
             }
         }).runTaskLater(AnotherGUIPlugin.plugin, 1L);
     }

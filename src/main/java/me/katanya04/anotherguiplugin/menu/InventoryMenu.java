@@ -20,7 +20,6 @@ import org.bukkit.inventory.ItemStack;
 
 import java.util.*;
 import java.util.function.Consumer;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
@@ -41,7 +40,7 @@ public class InventoryMenu implements Menu<Inventory>, InventoryHolder {
     protected Consumer<InventoryClickEvent> onClickBehaviour;
     protected Consumer<InventoryCloseEvent> onCloseBehaviour;
     protected List<Inventory> currentlyOpenCopies;
-    protected Menu parent; /*Menu to return after closing this menu*/
+    protected Menu<?> parent; /*Menu to return after closing this menu*/
     public InventoryMenu(String GUIName, boolean canInteract, SaveOption saveChanges, InventoryType invType, ItemStack[] contents) {
         this.canInteract = canInteract;
         this.saveChanges = saveChanges;
@@ -52,11 +51,11 @@ public class InventoryMenu implements Menu<Inventory>, InventoryHolder {
         this.GUIName = GUIName;
     }
 
-    public void setParent(Menu parent) {
+    public void setParent(Menu<?> parent) {
         this.parent = parent;
     }
 
-    public Menu getParent() {
+    public Menu<?> getParent() {
         return parent;
     }
 
@@ -71,19 +70,19 @@ public class InventoryMenu implements Menu<Inventory>, InventoryHolder {
             return null;
     }
 
-    public List<Inventory> getCurrentlyViewedInventory(HumanEntity player) {
-        return getCurrentlyViewedInventory(inv -> inv.getViewers().contains(player));
-    }
-
-    public List<Inventory> getCurrentlyViewedInventory(Function<Inventory, Boolean> function) {
-        return currentlyOpenCopies.stream().filter(function::apply).collect(Collectors.toList());
+    public List<Inventory> getCurrentlyOpenCopies() {
+        return currentlyOpenCopies;
     }
 
     protected ItemStack[] getItemContents(Player player) {
         ItemStack[] contents;
         if (player == null || this.saveChanges != SaveOption.INDIVIDUAL ||
                 (contents = getSavedMenu(Utils.getPlayerUUID(player.getName()))) == null)
-            contents = this.contents;
+            contents = Arrays.copyOf(this.contents, this.contents.length);
+        for (int i = 0; i < contents.length; i++) {
+            if (ActionItem.isActionItem(contents[i]))
+                contents[i] = ActionItem.getActionItem(contents[i]).toItemStack(player);
+        }
         return contents;
     }
 
@@ -130,7 +129,7 @@ public class InventoryMenu implements Menu<Inventory>, InventoryHolder {
 
     @Override
     public void setContents(Inventory inv) {
-        this.contents = inv.getContents();
+        setContents(inv.getContents());
     }
 
     public void setContents(ItemStack[] contents) {
@@ -138,7 +137,7 @@ public class InventoryMenu implements Menu<Inventory>, InventoryHolder {
     }
 
     @Override
-    public Inventory getContents() {
+    public Inventory getGenerateContents() {
         return getInventory();
     }
 
@@ -195,11 +194,7 @@ public class InventoryMenu implements Menu<Inventory>, InventoryHolder {
     }
     protected ItemStack[] getSavedMenu(UUID uuid) {
         Object save = AnotherGUIPlugin.getStorage().get("menu-saves." + GUIName + "." + uuid);
-        if (save instanceof List)
-            return ((List<?>)save).stream().map(o -> (ItemStack) o).toArray(ItemStack[]::new);
-        if (save instanceof ItemStack[])
-            return (ItemStack[]) save;
-        return null;
+        return Utils.getCollectionOfItems(save);
     }
 
     public static class EventListener implements Listener {
@@ -207,10 +202,6 @@ public class InventoryMenu implements Menu<Inventory>, InventoryHolder {
         public void onInventoryOpen(InventoryOpenEvent e) {
             if (e.getInventory().getHolder() instanceof InventoryMenu) {
                 InventoryMenu inv = ((InventoryMenu) e.getInventory().getHolder());
-                for (int i = 0; i < inv.contents.length; i++) {
-                    if (ActionItem.isActionItem(inv.contents[i]))
-                        inv.contents[i] = ActionItem.getActionItem(inv.contents[i]).getItemStack(e.getPlayer());
-                }
                 if (inv.onOpenBehaviour != null)
                     inv.onOpenBehaviour.accept(e);
             }
