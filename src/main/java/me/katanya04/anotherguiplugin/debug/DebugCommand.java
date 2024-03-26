@@ -50,7 +50,7 @@ public class DebugCommand implements CommandExecutor {
             Arrays.asList("a", "b", "c"), pl -> pl.getFoodLevel() % 3, true, "ListItem");
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-        if (args.length > 0)
+        if (args.length > 0 || !sender.hasPermission("AnotherGUIPlugin.menusDebug"))
             return false;
         Player player = (Player) sender;
         anvilMenu1.setOnClickBehaviour(event -> {
