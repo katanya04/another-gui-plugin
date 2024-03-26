@@ -26,10 +26,12 @@ public class HotbarItems {
     }
     public void apply(Player player) {
         int i = 0;
-        for (ItemStack item : this.contents)
+        for (ItemStack item : this.contents) {
             if (canBeGiven == null || canBeGiven.apply(player, item))
-                player.getInventory().setItem(i++, ActionItem.isActionItem(item) ?
+                player.getInventory().setItem(i, ActionItem.isActionItem(item) ?
                         ActionItem.getActionItem(item).toItemStack(player) : item);
+            i++;
+        }
     }
     public ItemStack getItem(int slot) {
         return this.contents[slot];
