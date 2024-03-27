@@ -54,23 +54,17 @@ public class ChestMenu extends InventoryMenu {
     protected Inventory newInventory(Player player) {
         Inventory toret = super.newInventory(player);
         int size = toret.getSize();
-        if (nextPageMenu != null)
-            toret.setItem(size - 1, nextPage.toItemStack(player));
-        if (previousPageMenu != null)
-            toret.setItem(size - 9, previousPage.toItemStack(player));
         if (fillWithBarriers) {
-            int i = 0;
-            if (previousPageMenu != null)
-                i++;
-            i += numItems;
-            int maxIndex = toret.getSize();
-            if (nextPageMenu != null)
-                maxIndex--;
-            while (i < maxIndex) {
+            int i = numItems;
+            while (i < size) {
                 this.addProtectedSlots(i);
                 toret.setItem(i++, BARRIER);
             }
         }
+        if (nextPageMenu != null)
+            toret.setItem(size - 1, nextPage.toItemStack(player));
+        if (previousPageMenu != null)
+            toret.setItem(size - 9, previousPage.toItemStack(player));
         return toret;
     }
     @Override
