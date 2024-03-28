@@ -1,8 +1,10 @@
 package me.katanya04.anotherguiplugin.menu;
 
+import me.katanya04.anotherguiplugin.AnotherGUIPlugin;
 import me.katanya04.anotherguiplugin.utils.Utils;
 import me.katanya04.anotherguiplugin.actionItems.ActionItem;
 import org.bukkit.Material;
+import org.bukkit.entity.HumanEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.InventoryType;
 import org.bukkit.inventory.Inventory;
@@ -62,9 +64,9 @@ public class ChestMenu extends InventoryMenu {
             }
         }
         if (nextPageMenu != null)
-            toret.setItem(size - 1, nextPage.toItemStack(player));
+            toret.setItem(size - 1, nextPage.toItemStack(null));
         if (previousPageMenu != null)
-            toret.setItem(size - 9, previousPage.toItemStack(player));
+            toret.setItem(size - 9, previousPage.toItemStack(null));
         return toret;
     }
     @Override
@@ -77,5 +79,34 @@ public class ChestMenu extends InventoryMenu {
     }
     public boolean isFillWithBarriers() {
         return fillWithBarriers;
+    }
+    public void setNextPageMenu(InventoryMenu nextPageMenu) {
+        this.nextPageMenu = nextPageMenu;
+    }
+    public void setPreviousPageMenu(InventoryMenu previousPageMenu) {
+        this.previousPageMenu = previousPageMenu;
+    }
+    @Override
+    protected void save(Inventory contents, HumanEntity player, boolean saveToMemory) {
+        ItemStack[] items;
+        if (this.numItems == 0)
+            items = new ItemStack[0];
+        else
+            items = Arrays.stream(contents.getContents()).map(
+                    o -> previousPage.isThisActionItem(o) || (nextPage.isThisActionItem(o) && this.numItems % 9 == 0) ? null : o)
+                    .filter(o -> !nextPage.isThisActionItem(o) && !BARRIER.equals(o)).toArray(ItemStack[]::new);
+        switch (saveChanges) {
+            case NONE:
+                break;
+            case GLOBAL:
+                this.contents = items;
+                this.currentlyOpenCopies.stream().filter(o -> !contents.equals(o)).forEach(inv -> inv.setContents(items));
+                break;
+            case INDIVIDUAL:
+                if (!saveToMemory)
+                    break;
+                AnotherGUIPlugin.getStorage().set("menu-saves." + GUIName + "." + Utils.getPlayerUUID(player.getName()), items);
+                AnotherGUIPlugin.getStorage().saveConfig();
+        }
     }
 }

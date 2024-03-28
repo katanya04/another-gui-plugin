@@ -1,6 +1,7 @@
 package me.katanya04.anotherguiplugin.utils;
 
 import java.util.*;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 public class TreeNode<T, U extends TreeNode<T, U>> implements Iterable<U> {
@@ -74,24 +75,36 @@ public class TreeNode<T, U extends TreeNode<T, U>> implements Iterable<U> {
         return children.get(n).cast();
     }
 
-    public U getChildGivenData(T data) {
-        List<U> children = getChildren();
-        for (U node : children)
-            if (data.equals(node.data))
-                return node.cast();
-        return null;
+    public U getFirstChildGivenData(T data) {
+        return getChildByPredicate(node -> Objects.equals(node.data, data), false);
+    }
+
+    public U getChildByPredicate(Predicate<U> predicate, boolean recursive) {
+        U toret = null;
+        for (U node : this.getChildren()) {
+            if (predicate.test(node))
+                return node;
+            if (recursive && node.numChildren() > 0)
+                toret = node.getChildByPredicate(predicate, true);
+            if (toret != null)
+                return toret;
+        }
+        return toret;
+    }
+
+    public List<U> getChildrenByPredicate(Predicate<U> predicate, boolean recursive) {
+        List<U> toret = new ArrayList<>();
+        for (U node : this.getChildren()) {
+            if (predicate.test(node))
+                toret.add(node);
+            if (recursive && node.numChildren() > 0)
+                toret.addAll(node.getChildrenByPredicate(predicate, true));
+        }
+        return toret;
     }
 
     public List<U> getChildrenGivenData(T data, boolean recursive) {
-        List<U> toret = new ArrayList<>();
-        List<U> children = getChildren();
-        for (U node : children) {
-            if (node.data.equals(data))
-                toret.add(node);
-            if (recursive && node.numChildren() > 0)
-                toret.addAll(node.getChildrenGivenData(data, true));
-        }
-        return toret;
+        return this.getChildrenByPredicate(node -> Objects.equals(node.data, data), recursive);
     }
 
     public boolean removeChild(U node) {
@@ -153,10 +166,7 @@ public class TreeNode<T, U extends TreeNode<T, U>> implements Iterable<U> {
     }
 
     private U getChildGivenId(String id) {
-        for (TreeNode<T, U> node : children)
-            if (id.equals(node.getId()))
-                return node.cast();
-        return null;
+        return getChildByPredicate(node -> Objects.equals(node.getId(), id), false);
     }
 
     public String getId() {

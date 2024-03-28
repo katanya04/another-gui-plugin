@@ -94,6 +94,10 @@ public class ActionItem {
         return Utils.containsNBT(itemStack, nameKeyString);
     }
 
+    public boolean isThisActionItem(ItemStack itemStack) {
+        return isActionItem(itemStack) && getName(itemStack).equals(this.name);
+    }
+
     public static ActionItem getActionItem(ItemStack itemStack) {
         return actionItems.get(ActionItem.getName(itemStack));
     }

@@ -45,7 +45,12 @@ public class DebugCommand implements CommandExecutor {
     static MenuItem<BookMenu<?>> menu6 = new MenuItem<>(new ItemStack(Material.BOOK), bookMenu1, "bookMenu1");
     static BookMenu<?> bookMenuFromConfig = new BookMenu<>(ignored -> {
         BookMenu.Field root = BookMenu.Field.fromConfig(AnotherGUIPlugin.getStorage());
-        root.getChildGivenData("menu-saves").getChildGivenData("chestMenu4").getChildren().forEach(o -> o.setIsModifiable(BookMenu.Field.ModifiableOption.YES));
+        root.getFirstChildGivenData("menu-saves").getFirstChildGivenData("chestMenu4").getChildren().forEach(o -> o.setIsModifiable(BookMenu.Field.ModifiableOption.YES));
+        root.getChildrenByPredicate(node -> node instanceof BookMenu.InventoryField, true).forEach(o -> {
+            InventoryMenu inv = ((BookMenu.InventoryField) o).getInvMenu();
+            if (inv instanceof ChestMenu)
+                ((ChestMenu) inv).setFillWithBarriers(true);
+        });
         return root;
     });
     static MenuItem<BookMenu<?>> menu7 = new MenuItem<>(new ItemStack(Material.BOOK), bookMenuFromConfig, "bookMenu2");
