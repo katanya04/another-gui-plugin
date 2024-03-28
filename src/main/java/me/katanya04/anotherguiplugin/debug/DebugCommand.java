@@ -56,6 +56,13 @@ public class DebugCommand implements CommandExecutor {
     static MenuItem<BookMenu<?>> menu7 = new MenuItem<>(new ItemStack(Material.BOOK), bookMenuFromConfig, "bookMenu2");
     static ListItem listItem = new ListItem(arg -> Utils.setName(new ItemStack(Material.PAPER), "list: " + arg.getDisplayName()),
             Arrays.asList("a", "b", "c"), pl -> pl.getFoodLevel() % 3, true, "ListItem");
+    static MenuItem<ChestMenu> menu8 = new MenuItem<>(new ItemStack(Material.COMMAND_MINECART), new ChestMenu("menu8",
+            new ItemStack[27], true, InventoryMenu.SaveOption.INDIVIDUAL, null, null), "menu8");
+    static MenuItem<ChestMenu> menu9 = new MenuItem<>(new ItemStack(Material.COMMAND_MINECART), new ChestMenu("menu9",
+            new ItemStack[1], true, InventoryMenu.SaveOption.INDIVIDUAL, null, null), "menu9");
+    static {
+        menu9.getMenu().setFillWithBarriers(true);
+    }
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (args.length > 0 || !sender.hasPermission("AnotherGUIPlugin.menusDebug"))
@@ -77,7 +84,8 @@ public class DebugCommand implements CommandExecutor {
 
         contentsField1.addChild(new BookMenu.Field("inventory", false, false).addChild(contentsField2));
         player.getInventory().addItem(menu1.toItemStack(), menu2.toItemStack(), menu3.toItemStack(), menu4.toItemStack(),
-                menuTest.toItemStack(), menu5.toItemStack(), menu6.toItemStack(), menu7.toItemStack(), listItem.toItemStack(player));
+                menuTest.toItemStack(), menu5.toItemStack(), menu6.toItemStack(), menu7.toItemStack(), listItem.toItemStack(player),
+                menu8.toItemStack(), menu9.toItemStack());
 
 
         return false;

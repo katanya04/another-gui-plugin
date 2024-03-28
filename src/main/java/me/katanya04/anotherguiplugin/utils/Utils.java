@@ -8,6 +8,7 @@ import net.md_5.bungee.api.chat.TextComponent;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.configuration.ConfigurationSection;
+import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.map.MinecraftFont;
@@ -175,5 +176,30 @@ public class Utils {
                 return (ItemStack[]) obj;
         } catch (ClassCastException ignored) {}
         return null;
+    }
+
+    public static Set<Integer> findSlots(Inventory inv, ItemStack itemStack, int amountOfItems) {
+        Set<Integer> toret = new HashSet<>();
+        int i = 0;
+        for (ItemStack item : inv.getContents()) {
+            if (item == null || item.getType() == Material.AIR) {
+                toret.add(i);
+                amountOfItems -= itemStack.getMaxStackSize();
+            } else if (itemStack.isSimilar(item) && item.getAmount() < item.getMaxStackSize()) {
+                toret.add(i);
+                amountOfItems -= item.getMaxStackSize() - item.getAmount();
+            }
+            if (amountOfItems < 1)
+                break;
+            i++;
+        }
+        return toret;
+    }
+
+    public static <T> boolean shareRepeatedValue(Collection<T> collection1, Collection<T> collection2) {
+        HashSet<T> set = new HashSet<>(collection1);
+        List<T> list = new LinkedList<>(collection2);
+        list.retainAll(set);
+        return !list.isEmpty();
     }
 }

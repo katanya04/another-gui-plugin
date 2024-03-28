@@ -64,9 +64,9 @@ public class ChestMenu extends InventoryMenu {
             }
         }
         if (nextPageMenu != null)
-            toret.setItem(size - 1, nextPage.toItemStack(null));
+            toret.setItem(size - 1, nextPage.toItemStack());
         if (previousPageMenu != null)
-            toret.setItem(size - 9, previousPage.toItemStack(null));
+            toret.setItem(size - 9, previousPage.toItemStack());
         return toret;
     }
     @Override

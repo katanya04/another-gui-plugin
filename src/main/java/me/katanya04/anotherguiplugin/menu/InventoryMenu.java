@@ -211,7 +211,10 @@ public class InventoryMenu implements Menu<Inventory>, InventoryHolder {
         public void onInventoryClick(InventoryClickEvent e) {
             if (e.getClickedInventory() != null && e.getInventory().getHolder() instanceof InventoryMenu) {
                 InventoryMenu inv = ((InventoryMenu) e.getInventory().getHolder());
-                if (!inv.canInteract || inv.protectedSlots.contains(e.getSlot()))
+                if (((!inv.canInteract || inv.protectedSlots.contains(e.getSlot())) && e.getClickedInventory().equals(e.getInventory())) ||
+                        (e.getClick().isShiftClick() && !e.getClickedInventory().equals(e.getInventory()) && (!inv.canInteract || Utils.shareRepeatedValue(
+                                Utils.findSlots(e.getInventory(), e.getCurrentItem(), e.getCurrentItem().getAmount()), inv.protectedSlots)))
+                )
                     e.setCancelled(true);
                 else //save contents must be done on next server tick
                     Bukkit.getScheduler().runTask(AnotherGUIPlugin.plugin,
