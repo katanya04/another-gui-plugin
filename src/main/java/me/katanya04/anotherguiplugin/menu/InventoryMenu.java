@@ -51,6 +51,14 @@ public class InventoryMenu implements Menu<Inventory>, InventoryHolder {
         this.GUIName = GUIName;
     }
 
+    public String getGUIName() {
+        return GUIName;
+    }
+
+    public void setGUIName(String GUIName) {
+        this.GUIName = GUIName;
+    }
+
     public void setParent(Menu<?> parent) {
         this.parent = parent;
     }
@@ -77,7 +85,7 @@ public class InventoryMenu implements Menu<Inventory>, InventoryHolder {
     protected ItemStack[] getItemContents(Player player) {
         ItemStack[] contents;
         if (player == null || this.saveChanges != SaveOption.INDIVIDUAL ||
-                (contents = getSavedMenu(Utils.getPlayerUUID(player.getName()))) == null)
+                (contents = getSavedMenu(player, this.GUIName)) == null)
             contents = Arrays.copyOf(this.contents, this.contents.length);
         for (int i = 0; i < contents.length; i++) {
             if (ActionItem.isActionItem(contents[i]))
@@ -196,8 +204,8 @@ public class InventoryMenu implements Menu<Inventory>, InventoryHolder {
                 AnotherGUIPlugin.getStorage().saveConfig();
         }
     }
-    protected ItemStack[] getSavedMenu(UUID uuid) {
-        Object save = AnotherGUIPlugin.getStorage().get("menu-saves." + GUIName + "." + uuid);
+    public static ItemStack[] getSavedMenu(Player player, String GUIName) {
+        Object save = AnotherGUIPlugin.getStorage().get("menu-saves." + GUIName + "." + Utils.getPlayerUUID(player.getName()));
         return Utils.getCollectionOfItems(save);
     }
 

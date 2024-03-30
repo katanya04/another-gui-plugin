@@ -7,8 +7,6 @@ import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
-import org.bukkit.event.block.Action;
-import org.bukkit.event.inventory.ClickType;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.player.PlayerDropItemEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
@@ -113,23 +111,25 @@ public class ActionItem {
     public static class EventListener implements Listener {
         @EventHandler
         public void onInteract(PlayerInteractEvent e) {
-            ActionItem actionItem;
-            if (!(e.getAction().equals(Action.RIGHT_CLICK_AIR) || e.getAction().equals(Action.RIGHT_CLICK_BLOCK)) || (actionItem = ActionItem.getActionItem(e.getItem())) == null)
+            ActionItem actionItem = ActionItem.getActionItem(e.getItem());
+            if (actionItem == null)
                 return;
             actionItem.setParent(null);
             e.setCancelled(true);
-            Bukkit.getPluginManager().callEvent(new ActionItemInteractEvent(e.getPlayer(), actionItem, e.getItem(), e.getPlayer().getInventory()));
+            Bukkit.getPluginManager().callEvent(new ActionItemInteractEvent(e.getPlayer(), actionItem, e.getItem(),
+                    e.getPlayer().getInventory(), e.getAction()));
         }
 
         @EventHandler
         public void onClickInventory(InventoryClickEvent e) {
-            ActionItem actionItem;
-            if (e.getClick() == ClickType.LEFT && (actionItem = ActionItem.getActionItem(e.getCurrentItem())) != null) {
-                if (e.getClickedInventory().getHolder() instanceof InventoryMenu)
-                    actionItem.setParent((InventoryMenu) e.getClickedInventory().getHolder());
-                e.setCancelled(true);
-                Bukkit.getPluginManager().callEvent(new ActionItemInteractEvent((Player) e.getWhoClicked(), actionItem, e.getCurrentItem(), e.getClickedInventory()));
-            }
+            ActionItem actionItem = ActionItem.getActionItem(e.getCurrentItem());
+            if (actionItem == null)
+                return;
+            if (e.getClickedInventory().getHolder() instanceof InventoryMenu)
+                actionItem.setParent((InventoryMenu) e.getClickedInventory().getHolder());
+            e.setCancelled(true);
+            Bukkit.getPluginManager().callEvent(new ActionItemInteractEvent((Player) e.getWhoClicked(), actionItem,
+                    e.getCurrentItem(), e.getClickedInventory(), e.getClick()));
         }
 
         @EventHandler
