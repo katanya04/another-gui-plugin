@@ -88,13 +88,7 @@ public class ChestMenu extends InventoryMenu {
     }
     @Override
     protected void save(Inventory contents, HumanEntity player, boolean saveToMemory) {
-        ItemStack[] items;
-        if (this.numItems == 0)
-            items = new ItemStack[0];
-        else
-            items = Arrays.stream(contents.getContents()).map(
-                    o -> previousPage.isThisActionItem(o) || (nextPage.isThisActionItem(o) && this.numItems % 9 == 0) ? null : o)
-                    .filter(o -> !nextPage.isThisActionItem(o) && !BARRIER.equals(o)).toArray(ItemStack[]::new);
+        ItemStack[] items = getWithoutUIElements(contents);
         switch (saveChanges) {
             case NONE:
                 break;
@@ -108,5 +102,21 @@ public class ChestMenu extends InventoryMenu {
                 AnotherGUIPlugin.getStorage().set("menu-saves." + GUIName + "." + Utils.getPlayerUUID(player.getName()), items);
                 AnotherGUIPlugin.getStorage().saveConfig();
         }
+    }
+    public ItemStack[] getWithoutUIElements(Inventory contents) {
+        ItemStack[] items;
+        if (this.numItems == 0)
+            items = new ItemStack[0];
+        else
+            items = Arrays.stream(contents.getContents()).map(
+                            o -> previousPage.isThisActionItem(o) || (nextPage.isThisActionItem(o) && this.numItems % 9 == 0) ? null : o)
+                    .filter(o -> !nextPage.isThisActionItem(o) && !BARRIER.equals(o)).limit(numItems).toArray(ItemStack[]::new);
+        return items;
+    }
+    @Override
+    public Inventory getContents() {
+        Inventory inv = getInventory();
+        inv.setContents(getWithoutUIElements(inv));
+        return inv;
     }
 }

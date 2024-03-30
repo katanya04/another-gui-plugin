@@ -11,7 +11,7 @@ import org.bukkit.scheduler.BukkitRunnable;
 public interface Menu<T> {
     void openMenu(Player player);
     void setContents(T generateContents);
-    T getGenerateContents();
+    T getContents();
     void clear();
     static void openMenuOneTickLater(Player player, Menu<?> invMenu, boolean closeCurrent) {
         if (closeCurrent)

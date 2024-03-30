@@ -97,7 +97,7 @@ public class BookMenu<T> implements Menu<BookMenu.Field> {
     }
 
     @Override
-    public Field getGenerateContents() {
+    public Field getContents() {
         return generateContents.apply(null);
     }
 
@@ -228,7 +228,8 @@ public class BookMenu<T> implements Menu<BookMenu.Field> {
             for (Field entry : entries.getChildren())
                 toret.addAll(buildPagesFromField(entry, path + "." + entry.getId()));
         } else { //the field is the value
-            entryValue = (entries instanceof InventoryField ? InventoryField.OPEN_INV_MSG : getColorOfValue(entryValue.trim()) + entryValue) + "§r§0";
+            entryValue = (entries instanceof InventoryField ? getIndentation(indentationLevel) + InventoryField.OPEN_INV_MSG
+                    : getColorOfValue(entryValue.trim()) + entryValue) + "§r§0";
             if (entries.isRemovableFromBook() && !isRoot)
                 toret.add(getRemoveButton(path));
         }
@@ -249,9 +250,7 @@ public class BookMenu<T> implements Menu<BookMenu.Field> {
         private Predicate<String> validCheckFunction;
         private boolean removableFromBook;
         private boolean canAddMoreFields;
-
         public enum ModifiableOption {YES, NO, ONLY_IF_LEAF}
-
         private ModifiableOption isModifiable;
         private int maxNumberOfFields;
         private String modifyPermission;
@@ -291,7 +290,9 @@ public class BookMenu<T> implements Menu<BookMenu.Field> {
                 } else if (event.getRawSlot() == 1 && event.getClickedInventory().getItem(1) != null && event.getClickedInventory().getItem(1).getType() != Material.AIR) {
                     Field parent_ = field.getParent();
                     Field f = parent_.getChild(parent_.numChildren() - 2);
-                    field.copy(f);
+                    parent_.removeChild(field);
+                    field = new Field(f);
+                    parent_.addChild(field);
                     event.getClickedInventory().setItem(1, null);
                     event.getWhoClicked().closeInventory();
                 }
@@ -330,9 +331,8 @@ public class BookMenu<T> implements Menu<BookMenu.Field> {
             this.shouldUseCache = true;
         }
 
-        @Override
-        public void copy(Field field) {
-            this.data = field.data;
+        public Field(Field field) {
+            super(field);
             this.validCheckFunction = field.validCheckFunction;
             this.removableFromBook = field.removableFromBook;
             this.canAddMoreFields = field.canAddMoreFields;
@@ -348,93 +348,11 @@ public class BookMenu<T> implements Menu<BookMenu.Field> {
             recursiveCopyChildren(this, field);
         }
 
-        protected static void changeKeyName(Field field, ConfigurationSection config) {
-            if (field.parent == null)
-                return;
-            Set<String> keysInConfig = config.getKeys(false);
-            Set<String> keysInField = field.parent.getChildren().stream().map(Field::getData).collect(Collectors.toSet());
-            keysInConfig.removeAll(keysInField);
-            if (keysInConfig.isEmpty())
-                return;
-            String oldKey = keysInConfig.iterator().next();
-            if (config.isConfigurationSection(oldKey))
-                config.createSection(field.data, ((ConfigurationSection) config.get(oldKey)).getValues(false));
-            else
-                config.set(field.data, config.get(oldKey));
-            config.set(oldKey, null);
-        }
-
-        protected void addConfigChild(Field field, ConfigurationSection config) { //the child has already been added when calling this function
-            if (this.numChildren() == 1) {
-                field.setOnModifyValue(f -> config.set(this.data, f.data));
-            } else {
-                field.setOnModifyValue(f -> config.set(this.data,
-                        new ArrayList<>(this.getChildren().stream().map(TreeNode::getData).collect(Collectors.toList()))
-                ));
-            }
-        }
-
-        protected void removeConfigChild(ConfigurationSection config) { //the child has already been removed when calling this function
-            if (this.numChildren() == 0) {
-                config.set(this.data, null);
-            } else {
-                List<String> list = new ArrayList<>();
-                this.getChildren().forEach(o -> list.add(o.getData()));
-                config.set(this.data, list);
-            }
-            this.triggerUpdate();
-        }
-
-        public static Field fromConfig(ConfigurationSection config) {
-            Field root = new Field(config.getName(), field -> changeKeyName(field, config.getParent()), null);
-            root.shouldUseCache = false;
-            for (Map.Entry<String, Object> entry : config.getValues(false).entrySet()) {
-                Field currentEntry;
-                if (entry.getValue() instanceof ConfigurationSection) {
-                    ConfigurationSection value = (ConfigurationSection) entry.getValue();
-                    currentEntry = fromConfig(value);
-                    currentEntry.setOnAddChildren(field -> currentEntry.addConfigChild(field, config));
-                    currentEntry.setOnRemoveChildren(field -> currentEntry.removeConfigChild(config));
-                } else if (Utils.getCollectionOfItems(entry.getValue()) != null) {
-                    currentEntry = new Field(entry.getKey(), field -> changeKeyName(field, config), null)
-                            .addChild(InventoryField.fromConfig(config, entry));
-                    currentEntry.setOnAddChildren(field -> currentEntry.addConfigChild(field, config));
-                    currentEntry.setOnRemoveChildren(field -> currentEntry.removeConfigChild(config));
-                } else if (entry.getValue() instanceof Collection<?>) {
-                    Collection<?> value = (Collection<?>) entry.getValue();
-                    List<Field> children = new ArrayList<>();
-                    for (Object obj : value)
-                        children.add(new Field(obj.toString()));
-                    currentEntry = new Field(entry.getKey(), field -> changeKeyName(field, config), null).addChildren(children);
-                    currentEntry.setOnModifyChildrenValue(field -> {
-                        List<Object> list = new ArrayList<>();
-                        for (Field obj : currentEntry.getChildren()) {
-                            list.add(obj.data);
-                        }
-                        config.set(entry.getKey(), list);
-                    });
-                    currentEntry.setOnAddChildren(field -> currentEntry.addConfigChild(field, config));
-                    currentEntry.setOnRemoveChildren(field -> currentEntry.removeConfigChild(config));
-                } else {
-                    currentEntry = new Field(entry.getKey(), field -> changeKeyName(field, config), null).addChild(new Field(entry.getValue().toString(),
-                            field -> config.set(entry.getKey(), field.data), null));
-                    currentEntry.setOnAddChildren(field -> currentEntry.addConfigChild(field, config));
-                }
-                root.addChild(currentEntry);
-            }
-            root.setOnAddChildren(field -> root.addConfigChild(field, config));
-            root.setOnRemoveChildren(field -> root.removeConfigChild(config));
-            return root;
-        }
-
         @Override
         protected void recursiveCopyChildren(Field destination, Field sender) {
-            int i = 0;
+            destination.clear();
             for (Field node : sender.getChildren()) {
-                if (destination.numChildren() <= i)
-                    destination.addChild(new Field());
-                destination.getChild(i).copy(node);
-                i++;
+                destination.addChild(new Field(node));
             }
         }
 
@@ -522,6 +440,10 @@ public class BookMenu<T> implements Menu<BookMenu.Field> {
             this.onModifyChildrenValue = onModifyChildrenValue;
         }
 
+        public Consumer<Field> getOnModifyChildrenValue() {
+            return onModifyChildrenValue;
+        }
+
         public void setIsModifiable(ModifiableOption isModifiable) {
             this.isModifiable = isModifiable;
         }
@@ -535,6 +457,7 @@ public class BookMenu<T> implements Menu<BookMenu.Field> {
             super.addChild(child);
             if (this.onAddChildren != null)
                 this.onAddChildren.accept(child);
+            triggerUpdate();
             return this;
         }
 
@@ -543,14 +466,16 @@ public class BookMenu<T> implements Menu<BookMenu.Field> {
             boolean toret = super.removeChild(node);
             if (this.onRemoveChildren != null)
                 this.onRemoveChildren.accept(node);
+            triggerUpdate();
             return toret;
         }
 
         public Field createChild() {
-            Field toret = new Field("");
+            Field toret;
             if (getChildTemplate() != null)
-                toret.copy(getChildTemplate());
-            toret.data = "none";
+                toret = new Field(getChildTemplate());
+            else
+                toret = new Field("none");
             this.addChild(toret);
             return toret;
         }
@@ -597,12 +522,23 @@ public class BookMenu<T> implements Menu<BookMenu.Field> {
         private InventoryMenu invMenu;
         public static final String OPEN_INV_MSG = "[Open menu]";
 
-        public InventoryField() {
-            this(null);
+        public InventoryField(InventoryField inventoryField) {
+            super(inventoryField);
+            this.invMenu = inventoryField.invMenu;
         }
 
-        public InventoryField(Consumer<Field> onModifyValue) {
+        public InventoryField(int slots, String name) {
+            this(new ChestMenu(name, new ItemStack[slots], true, InventoryMenu.SaveOption.GLOBAL, null, null));
+            ((ChestMenu) this.invMenu).setFillWithBarriers(true);
+        }
+
+        public InventoryField(InventoryMenu invMenu) {
+            this(invMenu, null);
+        }
+
+        public InventoryField(InventoryMenu invMenu, Consumer<Field> onModifyValue) {
             super(OPEN_INV_MSG);
+            setInvMenu(invMenu);
             setOnModifyValue(onModifyValue);
         }
 
@@ -624,18 +560,131 @@ public class BookMenu<T> implements Menu<BookMenu.Field> {
             throw new RuntimeException("Inventory fields cannot have children");
         }
 
-        public static InventoryField fromConfig(ConfigurationSection conf, Map.Entry<String, Object> entry) {
-            ItemStack[] items = Utils.getCollectionOfItems(entry.getValue());
+        public static InventoryField fromConfig(String name, Object itemsObj) {
+            ItemStack[] items = Utils.getCollectionOfItems(itemsObj);
             if (items == null)
                 items = new ItemStack[0];
-            InventoryField invField = new InventoryField();
-            ChestMenu menu = new ChestMenu(entry.getKey(), items, true, InventoryMenu.SaveOption.GLOBAL, null, null);
-            menu.setOnCloseBehaviour(event -> {
-                conf.set(entry.getKey(), event.getInventory().getContents());
-                invField.triggerUpdate();
-            });
-            invField.setInvMenu(menu);
+            ChestMenu menu = new ChestMenu(name, items, true, InventoryMenu.SaveOption.GLOBAL, null, null);
+            menu.setFillWithBarriers(true);
+            InventoryField invField = new InventoryField(menu);
+            menu.setOnCloseBehaviour(event -> invField.triggerUpdate());
             return invField;
+        }
+
+        @Override
+        public boolean canAddMoreFields() {
+            return false;
+        }
+    }
+
+    public static class ConfigField extends Field {
+        private boolean isRoot;
+        private ConfigurationSection configurationSection;
+
+        private ConfigField(String data) {
+            super(data);
+        }
+
+        private ConfigField(Field field) {
+            super(field);
+        }
+
+        @Override
+        protected void recursiveCopyChildren(Field destination, Field sender) {
+            destination.clear();
+            for (Field node : sender.getChildren())
+                destination.addChild(node instanceof InventoryField ? new InventoryField((InventoryField) node) : new ConfigField(node));
+        }
+
+        @Override
+        public Field createChild() {
+            ConfigField toret;
+            if (getChildTemplate() != null)
+                toret = new ConfigField(getChildTemplate());
+            else
+                toret = new ConfigField("none");
+            this.addChild(toret);
+            return toret;
+        }
+
+        @Override
+        public void setOnModifyChildrenValue(Consumer<Field> onModifyChildrenValue) {
+            if (!isRoot)
+                super.setOnModifyChildrenValue(onModifyChildrenValue);
+            else {
+                Consumer<Field> defaultUpdate = field -> this.toConfig(this.configurationSection);
+                super.setOnModifyChildrenValue(defaultUpdate.andThen(onModifyChildrenValue));
+            }
+        }
+
+        public static ConfigField fromConfig(ConfigurationSection config) {
+            ConfigField root = fromConfig_(config);
+            root.setOnModifyChildrenValue(field -> root.toConfig(config));
+            root.setShouldUseCache(false);
+            root.isRoot = true;
+            root.configurationSection = config;
+            return root;
+        }
+
+        private static ConfigField fromConfig_(ConfigurationSection config) {
+            ConfigField root = new ConfigField(config.getName());
+            for (Map.Entry<String, Object> entry : config.getValues(false).entrySet()) {
+                ConfigField currentEntry;
+                if (entry.getValue() instanceof ConfigurationSection) {
+                    ConfigurationSection value = (ConfigurationSection) entry.getValue();
+                    currentEntry = fromConfig_(value);
+                } else if (Utils.getCollectionOfItems(entry.getValue()) != null) {
+                    currentEntry = new ConfigField(entry.getKey());
+                    currentEntry.addChild(InventoryField.fromConfig(entry.getKey(), entry.getValue()));
+                } else if (entry.getValue() instanceof Collection<?>) {
+                    currentEntry = new ConfigField(entry.getKey());
+                    Collection<?> value = (Collection<?>) entry.getValue();
+                    List<Field> children = new ArrayList<>();
+                    for (Object obj : value) {
+                        if (Utils.getCollectionOfItems(obj) != null)
+                            children.add(InventoryField.fromConfig(currentEntry.data, obj));
+                        else
+                            children.add(new ConfigField(obj.toString()));
+                    }
+                    currentEntry.addChildren(children);
+                } else {
+                    currentEntry = new ConfigField(entry.getKey());
+                    currentEntry.addChild(new ConfigField(entry.getValue().toString()));
+                }
+                root.addChild(currentEntry);
+            }
+            return root;
+        }
+
+        public ConfigurationSection toConfig(ConfigurationSection config) {
+            Utils.clearConfSection(config);
+            toConfig(config, "");
+            return config;
+        }
+
+        public void toConfig(ConfigurationSection config, String path) {
+            if (this.isLeaf())
+                return;
+            int leafChildren = this.getChildrenByPredicate(TreeNode::isLeaf, false).size();
+            for (Field node : this.getChildren()) {
+                if (!(node instanceof ConfigField) && !(node instanceof InventoryField))
+                    return;
+                if (node.isLeaf()) {
+                    if (path.isEmpty())
+                        continue;
+                    Object data = node instanceof InventoryField ? ((InventoryField) node).getInvMenu().getContentsItemArray()
+                            : node.getData();
+                    if (leafChildren == 1)
+                        config.set(path, data);
+                    else {
+                        List<Object> list = config.getList(path) == null ? new ArrayList<>() : config.getList(path)
+                                .stream().map(o -> o == null ? null : (Object) o).collect(Collectors.toList());
+                        list.add(data);
+                        config.set(path, list);
+                    }
+                } else if (node instanceof ConfigField)
+                    ((ConfigField) node).toConfig(config, path + "." + node.getData());
+            }
         }
     }
 

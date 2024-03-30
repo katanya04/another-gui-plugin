@@ -1,6 +1,7 @@
 package me.katanya04.anotherguiplugin.utils;
 
 import java.util.*;
+import java.util.function.Consumer;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
@@ -14,21 +15,16 @@ public class TreeNode<T, U extends TreeNode<T, U>> implements Iterable<U> {
         this.children = new LinkedList<>();
     }
 
-    public void copy(U node) {
+    public TreeNode(U node) {
         this.data = node.data;
+        this.children = new LinkedList<>();
         recursiveCopyChildren(this.cast(), node);
     }
 
     protected void recursiveCopyChildren(U destination, U sender) {
-        int i = 0;
-        for (TreeNode<T, U> node : sender.children) {
-            if (destination.numChildren() <= i) {
-                U child = new TreeNode<T, U>(node.getData()).cast();
-                destination.addChild(child);
-            }
-            destination.getChild(i).copy(node.cast());
-            i++;
-        }
+        destination.children.clear();
+        for (TreeNode<T, U> node : sender.children)
+            destination.addChild((new TreeNode<>(node.cast())).cast());
     }
 
     public U addChild(T child) {
@@ -101,6 +97,14 @@ public class TreeNode<T, U extends TreeNode<T, U>> implements Iterable<U> {
                 toret.addAll(node.getChildrenByPredicate(predicate, true));
         }
         return toret;
+    }
+
+    public void applyToChildren(Consumer<U> function, boolean recursive) {
+        for (U node : this.getChildren()) {
+            function.accept(node);
+            if (recursive && node.numChildren() > 0)
+                node.applyToChildren(function, true);
+        }
     }
 
     public List<U> getChildrenGivenData(T data, boolean recursive) {
@@ -184,5 +188,34 @@ public class TreeNode<T, U extends TreeNode<T, U>> implements Iterable<U> {
 
     protected U cast() {
         return (U) this;
+    }
+
+    @Override
+    public String toString() {
+        return recursiveToString(0);
+    }
+    protected String recursiveToString(int indentationLevel) {
+        StringBuilder sb = new StringBuilder();
+        int i = indentationLevel;
+        while (i-- > 0)
+            sb.append(" ");
+        Class<? extends TreeNode> clazz = this.cast().getClass();
+        sb.append(clazz.getSimpleName()).append(" data=").append(getData()).append(" id=").append(getId());
+        if (this.numChildren() > 0) {
+            sb.append(" children={\n");
+            for (U node : this.getChildren()) {
+                sb.append(node.recursiveToString(indentationLevel + 1));
+                sb.append("\n");
+            }
+            sb.append("\n");
+            i = indentationLevel;
+            while (i-- > 0)
+                sb.append(" ");
+            sb.append("}\n");
+        }
+        return sb.toString();
+    }
+    public boolean isLeaf() {
+        return this.numChildren() == 0;
     }
 }

@@ -40,17 +40,24 @@ public class DebugCommand implements CommandExecutor {
     }
     static MenuItem<ChestMenu> menu5 = new MenuItem<>(new ItemStack(Material.COMMAND), chestMenu4, "chestMenu4");
     static BookMenu.Field contentsField1 = new BookMenu.Field("example", true, true);
-    static BookMenu.InventoryField contentsField2 = new BookMenu.InventoryField();
+    static BookMenu.InventoryField contentsField2 = new BookMenu.InventoryField(new ChestMenu("InvMenuInBookMenu", new ItemStack[]{new ItemStack(Material.CAKE), null}, true, InventoryMenu.SaveOption.GLOBAL, null, null));
+    static {
+        ((ChestMenu) contentsField2.getInvMenu()).setFillWithBarriers(true);
+    }
     static BookMenu<?> bookMenu1 = new BookMenu<>(contentsField1);
     static MenuItem<BookMenu<?>> menu6 = new MenuItem<>(new ItemStack(Material.BOOK), bookMenu1, "bookMenu1");
     static BookMenu<?> bookMenuFromConfig = new BookMenu<>(ignored -> {
-        BookMenu.Field root = BookMenu.Field.fromConfig(AnotherGUIPlugin.getStorage());
-        root.getFirstChildGivenData("menu-saves").getFirstChildGivenData("chestMenu4").getChildren().forEach(o -> o.setIsModifiable(BookMenu.Field.ModifiableOption.YES));
-        root.getChildrenByPredicate(node -> node instanceof BookMenu.InventoryField, true).forEach(o -> {
-            InventoryMenu inv = ((BookMenu.InventoryField) o).getInvMenu();
-            if (inv instanceof ChestMenu)
-                ((ChestMenu) inv).setFillWithBarriers(true);
-        });
+        BookMenu.Field root = BookMenu.ConfigField.fromConfig(AnotherGUIPlugin.getStorage());
+        if (root.getFirstChildGivenData("menu-saves") != null && root.getFirstChildGivenData("menu-saves").getFirstChildGivenData("chestMenu4") != null) {
+            root.getFirstChildGivenData("menu-saves").getFirstChildGivenData("chestMenu4").getChildren().forEach(o -> o.setIsModifiable(BookMenu.Field.ModifiableOption.YES));
+            root.getChildrenByPredicate(node -> node instanceof BookMenu.InventoryField, true).forEach(o -> {
+                InventoryMenu inv = ((BookMenu.InventoryField) o).getInvMenu();
+                if (inv instanceof ChestMenu)
+                    ((ChestMenu) inv).setFillWithBarriers(true);
+            });
+        }
+        root.applyToChildren(o -> o.setCanAddMoreFields(true), true);
+        root.applyToChildren(o -> o.setRemovableFromBook(true), true);
         return root;
     });
     static MenuItem<BookMenu<?>> menu7 = new MenuItem<>(new ItemStack(Material.BOOK), bookMenuFromConfig, "bookMenu2");
@@ -78,9 +85,6 @@ public class DebugCommand implements CommandExecutor {
         contentsField1.addChild(new BookMenu.Field("this has children", true, false));
         contentsField1.getChild(1).addChild(new BookMenu.Field("this one", false, false));
         contentsField1.getChild(1).addChild(new BookMenu.Field("and this one", true, true));
-
-        contentsField2.setInvMenu(new ChestMenu("InvMenuInBookMenu", new ItemStack[]{new ItemStack(Material.CAKE), null}, true, InventoryMenu.SaveOption.GLOBAL, null, null));
-        ((ChestMenu) contentsField2.getInvMenu()).setFillWithBarriers(true);
 
         contentsField1.addChild(new BookMenu.Field("inventory", false, false).addChild(contentsField2));
         player.getInventory().addItem(menu1.toItemStack(), menu2.toItemStack(), menu3.toItemStack(), menu4.toItemStack(),

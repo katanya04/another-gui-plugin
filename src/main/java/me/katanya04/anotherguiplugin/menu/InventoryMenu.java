@@ -137,8 +137,12 @@ public class InventoryMenu implements Menu<Inventory>, InventoryHolder {
     }
 
     @Override
-    public Inventory getGenerateContents() {
+    public Inventory getContents() {
         return getInventory();
+    }
+
+    public ItemStack[] getContentsItemArray() {
+        return contents;
     }
 
     @Override
@@ -214,9 +218,9 @@ public class InventoryMenu implements Menu<Inventory>, InventoryHolder {
                 if (((!inv.canInteract || inv.protectedSlots.contains(e.getSlot())) && e.getClickedInventory().equals(e.getInventory())) ||
                         (e.getClick().isShiftClick() && !e.getClickedInventory().equals(e.getInventory()) && (!inv.canInteract || Utils.shareRepeatedValue(
                                 Utils.findSlots(e.getInventory(), e.getCurrentItem(), e.getCurrentItem().getAmount()), inv.protectedSlots)))
-                )
+                ) {
                     e.setCancelled(true);
-                else //save contents must be done on next server tick
+                } else //save contents must be done on next server tick
                     Bukkit.getScheduler().runTask(AnotherGUIPlugin.plugin,
                             () -> inv.save(e.getInventory(), e.getWhoClicked(), false));
                 if (inv.onClickBehaviour != null)

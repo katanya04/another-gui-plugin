@@ -202,4 +202,9 @@ public class Utils {
         list.retainAll(set);
         return !list.isEmpty();
     }
+
+    public static void clearConfSection(ConfigurationSection confSection) {
+        for (String key : confSection.getKeys(false))
+            confSection.set(key, null);
+    }
 }
