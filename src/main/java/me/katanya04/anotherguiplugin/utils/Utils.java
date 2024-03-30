@@ -110,7 +110,7 @@ public class Utils {
             return toret;
         CompletableFuture<UUID> uuid = PlayerUUIDCache.getUUIDMojang(playerName).thenApply(id -> {
             if (id != null) {
-                PlayerUUIDCache.addToCache(playerName, toret);
+                PlayerUUIDCache.addToCache(playerName, id);
                 return id;
             }
             else

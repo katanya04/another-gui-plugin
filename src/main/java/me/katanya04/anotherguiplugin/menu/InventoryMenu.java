@@ -2,6 +2,7 @@ package me.katanya04.anotherguiplugin.menu;
 
 import me.katanya04.anotherguiplugin.AnotherGUIPlugin;
 import me.katanya04.anotherguiplugin.actionItems.ActionItem;
+import me.katanya04.anotherguiplugin.utils.Callback;
 import me.katanya04.anotherguiplugin.utils.ReflectionMethods;
 import me.katanya04.anotherguiplugin.utils.Utils;
 import org.bukkit.Bukkit;
@@ -207,6 +208,12 @@ public class InventoryMenu implements Menu<Inventory>, InventoryHolder {
     public static ItemStack[] getSavedMenu(Player player, String GUIName) {
         Object save = AnotherGUIPlugin.getStorage().get("menu-saves." + GUIName + "." + Utils.getPlayerUUID(player.getName()));
         return Utils.getCollectionOfItems(save);
+    }
+    public static void getSavedMenuAsyncCallback(Player player, String GUIName, Callback<ItemStack[]> callback) {
+        Bukkit.getScheduler().runTaskAsynchronously(AnotherGUIPlugin.plugin, () -> {
+            ItemStack[] items = getSavedMenu(player, GUIName);
+            Bukkit.getScheduler().runTask(AnotherGUIPlugin.plugin, () -> callback.onQueryDone(items));
+        });
     }
 
     public static class EventListener implements Listener {
