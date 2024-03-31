@@ -108,14 +108,10 @@ public class Utils {
         UUID toret = PlayerUUIDCache.getUUIDFromCache(playerName);
         if (toret != null)
             return toret;
-        CompletableFuture<UUID> uuid = PlayerUUIDCache.getUUIDMojang(playerName).thenApply(id -> {
-            if (id != null) {
-                PlayerUUIDCache.addToCache(playerName, id);
-                return id;
-            }
-            else
-                return PlayerUUIDCache.getUUIDLocal(playerName);
-        });
+        if (PlayerUUIDCache.isNotPremium(playerName))
+            return PlayerUUIDCache.getUUIDLocal(playerName);
+        CompletableFuture<UUID> uuid = PlayerUUIDCache.getUUIDMojang(playerName)
+                .thenApply(id -> id != null ? id : PlayerUUIDCache.getUUIDLocal(playerName));
         try {
             return uuid.get();
         } catch (InterruptedException | ExecutionException e) {

@@ -12,15 +12,14 @@ import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
-import java.util.LinkedHashMap;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.logging.Level;
 
 public class PlayerUUIDCache {
     private static final String API_URL = "https://api.minecraftservices.com/minecraft/profile/lookup/name/%s";
     private static LinkedHashMap<String, UUID> cache;
+    private static LinkedHashSet<String> noPremium;
     private static int MAX_SIZE;
     public static void initialize() {
         MAX_SIZE = AnotherGUIPlugin.getConfiguration().getInt("player-uuid-cache-settings.max-size-entries", 300);
@@ -30,6 +29,14 @@ public class PlayerUUIDCache {
             @Override
             protected boolean removeEldestEntry(Map.Entry<String, UUID> eldest) {
                 return size() > MAX_SIZE;
+            }
+        };
+        noPremium = new LinkedHashSet<String>() {
+            @Override
+            public boolean add(String e) {
+                if (this.size() >= MAX_SIZE)
+                    this.remove(this.iterator().next());
+                return super.add(e);
             }
         };
     }
@@ -53,7 +60,13 @@ public class PlayerUUIDCache {
 
                 if (statusCode == HttpURLConnection.HTTP_OK) {
                     JSONObject json = readJSON(connection);
-                    return Utils.UUIDFromUnformattedString((String) json.get("id"));
+                    UUID uuid = Utils.UUIDFromUnformattedString((String) json.get("id"));
+                    addToCache(playerName, uuid);
+                    return uuid;
+                }
+                if (statusCode == HttpURLConnection.HTTP_NOT_FOUND) {
+                    noPremium.add(playerName);
+                    return null;
                 }
                 AnotherGUIPlugin.getLog().log(Level.SEVERE, "HTTP response code was not OK: " + statusCode);
                 return null;
@@ -67,6 +80,9 @@ public class PlayerUUIDCache {
     }
     static UUID getUUIDLocal(String playerName) {
         return UUID.nameUUIDFromBytes(playerName.getBytes(StandardCharsets.UTF_8));
+    }
+    static boolean isNotPremium(String playerName) {
+        return noPremium.contains(playerName);
     }
     private static JSONObject readJSON(HttpURLConnection connection) {
         try (
