@@ -2,8 +2,6 @@ package me.katanya04.anotherguiplugin.utils;
 
 import me.katanya04.anotherguiplugin.AnotherGUIPlugin;
 import net.md_5.bungee.api.chat.TextComponent;
-import net.minecraft.server.v1_8_R3.NBTTagCompound;
-import net.minecraft.server.v1_8_R3.NBTTagString;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
@@ -64,23 +62,15 @@ public class Utils {
             ItemStack = getNMSClass("ItemStack");
             CraftItemStack = getBukkitClass("CraftItemStack", "inventory");
             asNMSCopy = CraftItemStack.getMethod("asNMSCopy", ItemStack.class);
-            System.out.println("A");
             NBTTagCompound = getNMSClass("NBTTagCompound");
             hasTag = ItemStack.getMethod("hasTag");
-            System.out.println("B");
             getTag = ItemStack.getMethod("getTag");
-            System.out.println("C");
             NBTTagCompoundConstructor = NBTTagCompound.getConstructor();
             setString = NBTTagCompound.getMethod("setString", String.class, String.class);
-            System.out.println("D");
             setTag = ItemStack.getMethod("setTag", NBTTagCompound);
-            System.out.println("E");
             asBukkitCopy = CraftItemStack.getMethod("asBukkitCopy", ItemStack);
-            System.out.println("F");
             hasKey = NBTTagCompound.getMethod("hasKey", String.class);
-            System.out.println("G");
             get = NBTTagCompound.getMethod("get", String.class);
-            System.out.println("H");
             NBTTagString = getNMSClass("NBTTagString");
             Method temp;
             try {
@@ -90,7 +80,7 @@ public class Utils {
             }
             asString = temp;
         } catch (Exception ex) {
-            AnotherGUIPlugin.getLog().log(Level.SEVERE, "Reflection error, plugin may not work as expected: " + ex.getClass().getSimpleName());
+            AnotherGUIPlugin.getLog().log(Level.SEVERE, "Reflection error: " + ex.getClass().getSimpleName());
             throw new RuntimeException();
         }
     }
