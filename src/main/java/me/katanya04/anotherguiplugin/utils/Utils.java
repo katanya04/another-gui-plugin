@@ -1,10 +1,10 @@
 package me.katanya04.anotherguiplugin.utils;
 
-import com.comphenix.protocol.utility.MinecraftReflection;
-import com.comphenix.protocol.wrappers.nbt.NbtCompound;
-import com.comphenix.protocol.wrappers.nbt.NbtFactory;
 import me.katanya04.anotherguiplugin.AnotherGUIPlugin;
 import net.md_5.bungee.api.chat.TextComponent;
+import net.minecraft.server.v1_8_R3.NBTTagCompound;
+import net.minecraft.server.v1_8_R3.NBTTagString;
+import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.configuration.ConfigurationSection;
@@ -13,6 +13,8 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.map.MinecraftFont;
 
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Method;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
@@ -20,10 +22,78 @@ import java.util.logging.Level;
 import java.util.stream.Collectors;
 
 /**
- * A class containing static methods that server different purposes
+ * A class containing static methods that serve different purposes
  */
 public class Utils {
     private Utils() {}
+    private static final Class<?> ItemStack;
+    private static final Class<?> CraftItemStack;
+    private static final Method asNMSCopy;
+    private static final Class<?> NBTTagCompound;
+    private static final Method hasTag;
+    private static final Method getTag;
+    private static final Constructor<?> NBTTagCompoundConstructor;
+    private static final Method setString;
+    private static final Method setTag;
+    private static final Method asBukkitCopy;
+    private static final Method hasKey;
+    private static final Method get;
+    private static final Class<?> NBTTagString;
+    private static final Method asString;
+    private static Class<?> getNMSClass(String name) {
+        String version = Bukkit.getServer().getClass().getPackage().getName().split("\\.")[3];
+        try {
+            return Class.forName("net.minecraft.server." + version + "." + name);
+        } catch (ClassNotFoundException var3) {
+            AnotherGUIPlugin.getLog().log(Level.SEVERE, "NMS class not found \"" + name + "\"");
+            return null;
+        }
+    }
+
+    private static Class<?> getBukkitClass(String name, String packet) {
+        String version = Bukkit.getServer().getClass().getPackage().getName().split("\\.")[3];
+        try {
+            return Class.forName("org.bukkit.craftbukkit." + version + "." + packet + "." + name);
+        } catch (ClassNotFoundException var3) {
+            AnotherGUIPlugin.getLog().log(Level.SEVERE, "Bukkit class not found \"" + name + "\"");
+            return null;
+        }
+    }
+    static {
+        try {
+            ItemStack = getNMSClass("ItemStack");
+            CraftItemStack = getBukkitClass("CraftItemStack", "inventory");
+            asNMSCopy = CraftItemStack.getMethod("asNMSCopy", ItemStack.class);
+            System.out.println("A");
+            NBTTagCompound = getNMSClass("NBTTagCompound");
+            hasTag = ItemStack.getMethod("hasTag");
+            System.out.println("B");
+            getTag = ItemStack.getMethod("getTag");
+            System.out.println("C");
+            NBTTagCompoundConstructor = NBTTagCompound.getConstructor();
+            setString = NBTTagCompound.getMethod("setString", String.class, String.class);
+            System.out.println("D");
+            setTag = ItemStack.getMethod("setTag", NBTTagCompound);
+            System.out.println("E");
+            asBukkitCopy = CraftItemStack.getMethod("asBukkitCopy", ItemStack);
+            System.out.println("F");
+            hasKey = NBTTagCompound.getMethod("hasKey", String.class);
+            System.out.println("G");
+            get = NBTTagCompound.getMethod("get", String.class);
+            System.out.println("H");
+            NBTTagString = getNMSClass("NBTTagString");
+            Method temp;
+            try {
+                temp = NBTTagString.getMethod("asString");
+            } catch (NoSuchMethodException ex) {
+                temp = NBTTagString.getMethod("a_");
+            }
+            asString = temp;
+        } catch (Exception ex) {
+            AnotherGUIPlugin.getLog().log(Level.SEVERE, "Reflection error, plugin may not work as expected: " + ex.getClass().getSimpleName());
+            throw new RuntimeException();
+        }
+    }
     public static ItemStack setName(ItemStack item, String name) {
         ItemMeta itemMeta = item.getItemMeta();
         itemMeta.setDisplayName(name);
@@ -124,41 +194,43 @@ public class Utils {
     }
 
     public static ItemStack setItemNBT(ItemStack item, String key, String value) {
-        ItemStack craftItemStack = MinecraftReflection.getBukkitItemStack(item);
-        NbtCompound compound = NbtFactory.asCompound(NbtFactory.fromItemTag(craftItemStack));
-        compound.put(key, value);
-        NbtFactory.setItemTag(craftItemStack, compound);
-        return craftItemStack;
-    }
-
-    public static ItemStack setItemNBT(ItemStack item, Map<String, String> map) {
-        ItemStack craftItemStack = MinecraftReflection.getBukkitItemStack(item);
-        NbtCompound compound = NbtFactory.asCompound(NbtFactory.fromItemTag(craftItemStack));
-        for (Map.Entry<String, String> entry : map.entrySet())
-            compound.put(entry.getKey(), entry.getValue());
-        NbtFactory.setItemTag(craftItemStack, compound);
-        return craftItemStack;
-    }
-
-    public static String getNBT(ItemStack itemStack, String key) {
-        if (itemStack == null || itemStack.getType() == Material.AIR)
-            return null;
-        ItemStack craftItemStack = MinecraftReflection.getBukkitItemStack(itemStack);
-        NbtCompound compound = NbtFactory.asCompound(NbtFactory.fromItemTag(craftItemStack));
         try {
-            return compound.getString(key);
+            Object NMSItemVersion = asNMSCopy.invoke(null, item);
+            Object nbt = ((boolean) hasTag.invoke(NMSItemVersion)) ? getTag.invoke(NMSItemVersion) : NBTTagCompoundConstructor.newInstance();
+            setString.invoke(nbt, key, value);
+            setTag.invoke(NMSItemVersion, nbt);
+            return (ItemStack) asBukkitCopy.invoke(null, NMSItemVersion);
         } catch (Exception ex) {
             return null;
         }
     }
 
-    public static boolean containsNBT(ItemStack itemStack, String key) {
-        if (itemStack == null || itemStack.getType() == Material.AIR)
-            return false;
-        ItemStack craftItemStack = MinecraftReflection.getBukkitItemStack(itemStack);
-        NbtCompound compound = NbtFactory.asCompound(NbtFactory.fromItemTag(craftItemStack));
+    public static String getNBT(ItemStack item, String key) {
+        if (item == null || item.getType() == Material.AIR)
+            return null;
         try {
-            return compound.containsKey(key);
+            Object NMSItemVersion = asNMSCopy.invoke(null, item);
+            if (!(boolean) hasTag.invoke(NMSItemVersion))
+                return null;
+            Object nbt = getTag.invoke(NMSItemVersion);
+            if (!(boolean) hasKey.invoke(nbt, key))
+                return null;
+            Object value = get.invoke(nbt, key);
+            return (String) asString.invoke(value);
+        } catch (Exception ex) {
+            return null;
+        }
+    }
+
+    public static boolean containsNBT(ItemStack item, String key) {
+        if (item == null || item.getType() == Material.AIR)
+            return false;
+        try {
+            Object NMSItemVersion = asNMSCopy.invoke(null, item);
+            if (!(boolean) hasTag.invoke(NMSItemVersion))
+                return false;
+            Object nbt = getTag.invoke(NMSItemVersion);
+            return (boolean) hasKey.invoke(nbt, key);
         } catch (Exception ex) {
             return false;
         }

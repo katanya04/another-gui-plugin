@@ -1,7 +1,5 @@
 package me.katanya04.anotherguiplugin;
 
-import com.comphenix.protocol.ProtocolLibrary;
-import com.comphenix.protocol.ProtocolManager;
 import me.katanya04.anotherguiplugin.actionItems.ActionItem;
 import me.katanya04.anotherguiplugin.debug.DebugCommand;
 import me.katanya04.anotherguiplugin.menu.BookMenu;
@@ -9,12 +7,8 @@ import me.katanya04.anotherguiplugin.utils.PlayerUUIDCache;
 import me.katanya04.anotherguiplugin.utils.ReflectionMethods;
 import me.katanya04.anotherguiplugin.menu.InventoryMenu;
 import me.katanya04.anotherguiplugin.yaml.Config;
-import org.bukkit.configuration.ConfigurationSection;
-import org.bukkit.configuration.file.FileConfiguration;
-import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.plugin.java.JavaPlugin;
 
-import java.io.File;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 

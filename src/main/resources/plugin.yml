@@ -1,5 +1,4 @@
 name: AnotherGUIPlugin
-depend: [ProtocolLib]
 version: '${project.version}'
 main: me.katanya04.anotherguiplugin.AnotherGUIPlugin
 author: katanya04
