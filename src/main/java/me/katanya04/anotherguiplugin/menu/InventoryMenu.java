@@ -52,6 +52,14 @@ public class InventoryMenu implements Menu<Inventory>, InventoryHolder {
         this.GUIName = GUIName;
     }
 
+    public static ItemStack[] parseActionItemsByPlayer(ItemStack[] contents, Player player) {
+        for (int i = 0; i < contents.length; i++) {
+            if (ActionItem.isActionItem(contents[i]))
+                contents[i] = ActionItem.getActionItem(contents[i]).toItemStack(player);
+        }
+        return contents;
+    }
+
     public String getGUIName() {
         return GUIName;
     }
@@ -88,11 +96,7 @@ public class InventoryMenu implements Menu<Inventory>, InventoryHolder {
         if (player == null || this.saveChanges != SaveOption.INDIVIDUAL ||
                 (contents = getSavedMenu(player, this.GUIName)) == null)
             contents = Arrays.copyOf(this.contents, this.contents.length);
-        for (int i = 0; i < contents.length; i++) {
-            if (ActionItem.isActionItem(contents[i]))
-                contents[i] = ActionItem.getActionItem(contents[i]).toItemStack(player);
-        }
-        return contents;
+        return parseActionItemsByPlayer(contents, player);
     }
 
     @Override
