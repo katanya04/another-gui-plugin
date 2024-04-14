@@ -11,10 +11,7 @@ import org.bukkit.entity.HumanEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
-import org.bukkit.event.inventory.InventoryClickEvent;
-import org.bukkit.event.inventory.InventoryCloseEvent;
-import org.bukkit.event.inventory.InventoryOpenEvent;
-import org.bukkit.event.inventory.InventoryType;
+import org.bukkit.event.inventory.*;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.inventory.ItemStack;
@@ -40,6 +37,8 @@ public class InventoryMenu implements Menu<Inventory>, InventoryHolder {
     protected Consumer<InventoryOpenEvent> onOpenBehaviour;
     protected Consumer<InventoryClickEvent> onClickBehaviour;
     protected Consumer<InventoryCloseEvent> onCloseBehaviour;
+    protected Consumer<InventoryDragEvent> onDragBehaviour;
+    protected boolean retrieveItemOnCursorOnClose;
     protected List<Inventory> currentlyOpenCopies;
     protected Menu<?> parent; /*Menu to return after closing this menu*/
     public InventoryMenu(String GUIName, boolean canInteract, SaveOption saveChanges, InventoryType invType, ItemStack[] contents) {
@@ -175,6 +174,14 @@ public class InventoryMenu implements Menu<Inventory>, InventoryHolder {
         this.onClickBehaviour = onClickBehaviour;
     }
 
+    public void setOnDragBehaviour(Consumer<InventoryDragEvent> onDragBehaviour) {
+        this.onDragBehaviour = onDragBehaviour;
+    }
+
+    public void setRetrieveItemOnCursorOnClose(boolean retrieveItemOnCursorOnClose) {
+        this.retrieveItemOnCursorOnClose = retrieveItemOnCursorOnClose;
+    }
+
     public Set<Integer> getProtectedSlots() {
         return protectedSlots;
     }
@@ -213,6 +220,14 @@ public class InventoryMenu implements Menu<Inventory>, InventoryHolder {
         Object save = AnotherGUIPlugin.getStorage().get("menu-saves." + GUIName + "." + Utils.getPlayerUUID(player.getName()));
         return Utils.getCollectionOfItems(save);
     }
+    public static void resetPlayerSave(Player player, String GUIName) {
+        AnotherGUIPlugin.getStorage().set("menu-saves." + GUIName + "." + Utils.getPlayerUUID(player.getName()), null);
+        AnotherGUIPlugin.getStorage().saveConfig();
+    }
+    public void resetSavedContents() {
+        AnotherGUIPlugin.getStorage().set("menu-saves." + GUIName, null);
+        AnotherGUIPlugin.getStorage().saveConfig();
+    }
     public static void getSavedMenuAsyncCallback(Player player, String GUIName, Callback<ItemStack[]> callback) {
         Bukkit.getScheduler().runTaskAsynchronously(AnotherGUIPlugin.plugin, () -> {
             ItemStack[] items = getSavedMenu(player, GUIName);
@@ -229,7 +244,16 @@ public class InventoryMenu implements Menu<Inventory>, InventoryHolder {
                     inv.onOpenBehaviour.accept(e);
             }
         }
-
+        @EventHandler
+        public void onInventoryDrag(InventoryDragEvent e) {
+            if (e.getInventory().getHolder() instanceof InventoryMenu) {
+                InventoryMenu inv = ((InventoryMenu) e.getInventory().getHolder());
+                if (!inv.canInteract || !Collections.disjoint(inv.protectedSlots, e.getRawSlots()))
+                    e.setCancelled(true);
+                if (inv.onDragBehaviour != null)
+                    inv.onDragBehaviour.accept(e);
+            }
+        }
         @EventHandler
         public void onInventoryClick(InventoryClickEvent e) {
             if (e.getClickedInventory() != null && e.getInventory().getHolder() instanceof InventoryMenu) {
@@ -250,6 +274,8 @@ public class InventoryMenu implements Menu<Inventory>, InventoryHolder {
         public void onInventoryClose(InventoryCloseEvent e) {
             if (e.getInventory().getHolder() instanceof InventoryMenu) {
                 InventoryMenu inv = ((InventoryMenu) e.getInventory().getHolder());
+                if (inv.retrieveItemOnCursorOnClose)
+                    Utils.retrieveItemOnCursorOnClose(e);
                 if (inv.onCloseBehaviour != null)
                     inv.onCloseBehaviour.accept(e);
                 inv.currentlyOpenCopies.remove(e.getInventory());

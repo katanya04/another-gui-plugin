@@ -6,6 +6,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.configuration.ConfigurationSection;
+import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
@@ -264,5 +265,48 @@ public class Utils {
     public static void clearConfSection(ConfigurationSection confSection) {
         for (String key : confSection.getKeys(false))
             confSection.set(key, null);
+    }
+
+    public static Set<Integer> partials(ItemStack item, ItemStack[] inventory) {
+        Set<Integer> toret = new HashSet<>();
+        if (item != null) {
+            for (int i = 0; i < inventory.length; ++i) {
+                ItemStack cItem = inventory[i];
+                if (cItem != null && cItem.getAmount() < cItem.getMaxStackSize() && cItem.isSimilar(item)) {
+                    toret.add(i);
+                }
+            }
+        }
+        return toret;
+    }
+
+    public static void retrieveItemOnCursorOnClose(InventoryCloseEvent event) {
+        ItemStack itemOnCursor = event.getPlayer().getItemOnCursor();
+        if (itemOnCursor != null && itemOnCursor.getType() != Material.AIR) {
+            Inventory inv = event.getInventory();
+            int firstEmpty = inv.firstEmpty();
+            if (firstEmpty != -1) {
+                inv.setItem(firstEmpty, itemOnCursor);
+                event.getPlayer().setItemOnCursor(null);
+            } else {
+                int amount = itemOnCursor.getAmount();
+                Set<Integer> same = partials(itemOnCursor, inv.getContents());
+                for (int i : same) {
+                    if (amount > 0) {
+                        int freeSpace = itemOnCursor.getMaxStackSize() - inv.getItem(i).getAmount();
+                        if (freeSpace > amount) {
+                            inv.getItem(i).setAmount(amount + inv.getItem(i).getAmount());
+                            amount = 0;
+                            break;
+                        } else {
+                            inv.getItem(i).setAmount(itemOnCursor.getMaxStackSize());
+                            amount -= freeSpace;
+                        }
+                    }
+                }
+                itemOnCursor.setAmount(amount);
+                event.getPlayer().setItemOnCursor(itemOnCursor);
+            }
+        }
     }
 }
