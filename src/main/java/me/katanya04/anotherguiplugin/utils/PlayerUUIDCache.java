@@ -1,6 +1,9 @@
 package me.katanya04.anotherguiplugin.utils;
 
 import me.katanya04.anotherguiplugin.AnotherGUIPlugin;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.Listener;
+import org.bukkit.event.player.PlayerJoinEvent;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
@@ -18,27 +21,27 @@ import java.util.logging.Level;
 
 public class PlayerUUIDCache {
     private static final String API_URL = "https://api.minecraftservices.com/minecraft/profile/lookup/name/%s";
-    private static LinkedHashMap<String, UUID> cache;
-    private static LinkedHashSet<String> noPremium;
+    private static final LinkedHashMap<String, UUID> cache = new LinkedHashMap<String, UUID>() {
+        @Override
+        protected boolean removeEldestEntry(Map.Entry<String, UUID> eldest) {
+            return size() > MAX_SIZE;
+        }
+    };
+    private static final LinkedHashSet<String> noPremium = new LinkedHashSet<String>() {
+        @Override
+        public boolean add(String e) {
+            if (this.size() >= MAX_SIZE)
+                this.remove(this.iterator().next());
+            return super.add(e);
+        }
+    };
     private static int MAX_SIZE;
     public static void initialize() {
-        MAX_SIZE = AnotherGUIPlugin.getConfiguration().getInt("player-uuid-cache-settings.max-size-entries", 300);
-        if (MAX_SIZE < 1)
-            throw new ArrayIndexOutOfBoundsException();
-        cache = new LinkedHashMap<String, UUID>() {
-            @Override
-            protected boolean removeEldestEntry(Map.Entry<String, UUID> eldest) {
-                return size() > MAX_SIZE;
-            }
-        };
-        noPremium = new LinkedHashSet<String>() {
-            @Override
-            public boolean add(String e) {
-                if (this.size() >= MAX_SIZE)
-                    this.remove(this.iterator().next());
-                return super.add(e);
-            }
-        };
+        MAX_SIZE = AnotherGUIPlugin.getConfiguration().getInt("player-uuid-cache-settings.max-size-entries", 100);
+        if (MAX_SIZE < 1) {
+            AnotherGUIPlugin.getLog().log(Level.WARNING, "Invalid player uuid cache size, setting to default value (100)");
+            MAX_SIZE = 100;
+        }
     }
     static UUID getUUIDFromCache(String playerName) {
         return cache.get(playerName);
@@ -100,4 +103,12 @@ public class PlayerUUIDCache {
         }
     }
     private PlayerUUIDCache() {}
+    public static class PutOnCacheOnJoin implements Listener {
+        @EventHandler
+        public void onPlayerJoin(PlayerJoinEvent e) {
+            String playerName = e.getPlayer().getName();
+            if (!PlayerUUIDCache.cache.containsKey(playerName) && PlayerUUIDCache.noPremium.contains(playerName))
+                PlayerUUIDCache.getUUIDMojang(playerName);
+        }
+    }
 }

@@ -1,5 +1,7 @@
-package me.katanya04.anotherguiplugin.actionItems;
+package me.katanya04.anotherguiplugin.events;
 
+import me.katanya04.anotherguiplugin.actionItems.ActionItem;
+import me.katanya04.anotherguiplugin.actionItems.InteractionType;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Event;
 import org.bukkit.event.HandlerList;
@@ -11,14 +13,14 @@ import org.bukkit.inventory.ItemStack;
 public class ActionItemInteractEvent extends Event {
     private static final HandlerList HANDLERS = new HandlerList();
     private final Player player;
-    private final ActionItem actionItem;
+    private final ActionItem<Object> actionItem;
     private final ItemStack item;
     private final Inventory inv;
     private final ClickType clickType;
     private final Action actionType;
     private final InteractionType interactionType;
 
-    public ActionItemInteractEvent(Player player, ActionItem actionItem, ItemStack item, Inventory inv, ClickType clickType) {
+    public ActionItemInteractEvent(Player player, ActionItem<Object> actionItem, ItemStack item, Inventory inv, ClickType clickType) {
         this.player = player;
         this.actionItem = actionItem;
         this.item = item;
@@ -28,7 +30,7 @@ public class ActionItemInteractEvent extends Event {
         this.interactionType = fromClickType(clickType);
     }
 
-    public ActionItemInteractEvent(Player player, ActionItem actionItem, ItemStack item, Inventory inv, Action actionType) {
+    public ActionItemInteractEvent(Player player, ActionItem<Object> actionItem, ItemStack item, Inventory inv, Action actionType) {
         this.player = player;
         this.actionItem = actionItem;
         this.item = item;
@@ -75,7 +77,7 @@ public class ActionItemInteractEvent extends Event {
         return inv;
     }
 
-    public ActionItem getActionItem() {
+    public ActionItem<Object> getActionItem() {
         return actionItem;
     }
 

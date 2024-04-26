@@ -2,11 +2,15 @@ package me.katanya04.anotherguiplugin.menu;
 
 import me.katanya04.anotherguiplugin.AnotherGUIPlugin;
 import me.katanya04.anotherguiplugin.actionItems.ActionItem;
+import me.katanya04.anotherguiplugin.events.AfterUpdateOpenMenuEvent;
+import me.katanya04.anotherguiplugin.events.BeforeUpdateOpenMenuEvent;
 import me.katanya04.anotherguiplugin.utils.Callback;
 import me.katanya04.anotherguiplugin.utils.ReflectionMethods;
 import me.katanya04.anotherguiplugin.utils.Utils;
+import me.katanya04.anotherguiplugin.yaml.YamlFile;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
+import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.HumanEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -18,6 +22,7 @@ import org.bukkit.inventory.ItemStack;
 
 import java.util.*;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
@@ -29,7 +34,7 @@ public class InventoryMenu implements Menu<Inventory>, InventoryHolder {
             InventoryType.CREATIVE, InventoryType.MERCHANT, InventoryType.ENDER_CHEST, InventoryType.BEACON, InventoryType.ANVIL));
     protected String GUIName;
     protected InventoryType invType;
-    protected ItemStack[] contents;
+    protected Function<Player, ItemStack[]> contents;
     protected boolean canInteract;
     public enum SaveOption {NONE, GLOBAL, INDIVIDUAL};
     protected SaveOption saveChanges;
@@ -38,10 +43,17 @@ public class InventoryMenu implements Menu<Inventory>, InventoryHolder {
     protected Consumer<InventoryClickEvent> onClickBehaviour;
     protected Consumer<InventoryCloseEvent> onCloseBehaviour;
     protected Consumer<InventoryDragEvent> onDragBehaviour;
+    protected Consumer<BeforeUpdateOpenMenuEvent> beforeUpdateContents;
+    protected Consumer<AfterUpdateOpenMenuEvent> afterUpdateContents;
     protected boolean retrieveItemOnCursorOnClose;
     protected List<Inventory> currentlyOpenCopies;
     protected Menu<?> parent; /*Menu to return after closing this menu*/
+    protected YamlFile saveFile;
+    public boolean parseActionItems;
     public InventoryMenu(String GUIName, boolean canInteract, SaveOption saveChanges, InventoryType invType, ItemStack[] contents) {
+        this(GUIName, canInteract, saveChanges, invType, ignored -> contents);
+    }
+    public InventoryMenu(String GUIName, boolean canInteract, SaveOption saveChanges, InventoryType invType, Function<Player, ItemStack[]> contents) {
         this.canInteract = canInteract;
         this.saveChanges = saveChanges;
         this.protectedSlots = new HashSet<>();
@@ -49,6 +61,8 @@ public class InventoryMenu implements Menu<Inventory>, InventoryHolder {
         this.invType = invType;
         this.contents = contents;
         this.GUIName = GUIName;
+        this.saveFile = AnotherGUIPlugin.getStorage();
+        this.parseActionItems = true;
     }
 
     public static ItemStack[] parseActionItemsByPlayer(ItemStack[] contents, Player player) {
@@ -93,9 +107,9 @@ public class InventoryMenu implements Menu<Inventory>, InventoryHolder {
     protected ItemStack[] getItemContents(Player player) {
         ItemStack[] contents;
         if (player == null || this.saveChanges != SaveOption.INDIVIDUAL ||
-                (contents = getSavedMenu(player, this.GUIName)) == null)
-            contents = Arrays.copyOf(this.contents, this.contents.length);
-        return parseActionItemsByPlayer(contents, player);
+                (contents = getSavedMenu(player)) == null)
+            contents = this.contents.apply(player);
+        return this.parseActionItems ? parseActionItemsByPlayer(contents, player) : contents;
     }
 
     @Override
@@ -110,7 +124,7 @@ public class InventoryMenu implements Menu<Inventory>, InventoryHolder {
     protected Inventory newInventory(Player player) {
         Inventory toret;
         if (invType == InventoryType.CHEST) {
-            int size = Utils.ceilToMultipleOfNine(contents.length);
+            int size = Utils.ceilToMultipleOfNine(this.contents.apply(player).length);
             toret = Bukkit.createInventory(this, Math.min(size, MAX_CHEST_SIZE), GUIName);
         } else
             toret = Bukkit.createInventory(this, invType, GUIName);
@@ -135,8 +149,7 @@ public class InventoryMenu implements Menu<Inventory>, InventoryHolder {
 
     @Override
     public void clear() {
-        for (int i = 0; i < contents.length; i++)
-            contents[0] = null;
+        this.contents = ignored -> new ItemStack[0];
     }
 
     @Override
@@ -145,6 +158,10 @@ public class InventoryMenu implements Menu<Inventory>, InventoryHolder {
     }
 
     public void setContents(ItemStack[] contents) {
+        setContents(ignored -> contents);
+    }
+
+    public void setContents(Function<Player, ItemStack[]> contents) {
         this.contents = contents;
     }
 
@@ -154,7 +171,11 @@ public class InventoryMenu implements Menu<Inventory>, InventoryHolder {
     }
 
     public ItemStack[] getContentsItemArray() {
-        return contents;
+        return contents.apply(null);
+    }
+
+    public ItemStack[] getContentsItemArray(Player player) {
+        return contents.apply(player);
     }
 
     @Override
@@ -178,6 +199,14 @@ public class InventoryMenu implements Menu<Inventory>, InventoryHolder {
         this.onDragBehaviour = onDragBehaviour;
     }
 
+    public void setBeforeUpdateContents(Consumer<BeforeUpdateOpenMenuEvent> beforeUpdateContents) {
+        this.beforeUpdateContents = beforeUpdateContents;
+    }
+
+    public void setAfterUpdateContents(Consumer<AfterUpdateOpenMenuEvent> afterUpdateContents) {
+        this.afterUpdateContents = afterUpdateContents;
+    }
+
     public void setRetrieveItemOnCursorOnClose(boolean retrieveItemOnCursorOnClose) {
         this.retrieveItemOnCursorOnClose = retrieveItemOnCursorOnClose;
     }
@@ -198,39 +227,99 @@ public class InventoryMenu implements Menu<Inventory>, InventoryHolder {
         return canInteract;
     }
 
+    public void setSaveFile(YamlFile saveFile) {
+        this.saveFile = saveFile;
+    }
+
+    public ConfigurationSection getSaveFile() {
+        return saveFile;
+    }
+
     public SaveOption getSaveOption() {
         return saveChanges;
     }
-    protected void save(Inventory contents, HumanEntity player, boolean saveToMemory) {
+    protected void save(Inventory contents, Player player, boolean saveToDisk) {
         switch (saveChanges) {
             case NONE:
                 break;
             case GLOBAL:
-                this.contents = contents.getContents();
-                this.currentlyOpenCopies.stream().filter(o -> !contents.equals(o)).forEach(inv -> inv.setContents(contents.getContents()));
+                globalSave(contents, player);
                 break;
             case INDIVIDUAL:
-                if (!saveToMemory)
-                    break;
-                AnotherGUIPlugin.getStorage().set("menu-saves." + GUIName + "." + Utils.getPlayerUUID(player.getName()), contents.getContents());
-                AnotherGUIPlugin.getStorage().saveConfig();
+                saveToFile(contents, player, saveToDisk);
         }
     }
-    public static ItemStack[] getSavedMenu(Player player, String GUIName) {
-        Object save = AnotherGUIPlugin.getStorage().get("menu-saves." + GUIName + "." + Utils.getPlayerUUID(player.getName()));
+    protected void globalSave(Inventory contents, Player player) {
+        this.contents = ignored -> contents.getContents();
+        updateOpenMenus(contents, player);
+    }
+    public void updateOpenMenus(Inventory contents, Player player) {
+        this.currentlyOpenCopies.stream().filter(o -> !contents.equals(o)).forEach(inv -> {
+            BeforeUpdateOpenMenuEvent event = new BeforeUpdateOpenMenuEvent(this, inv, contents.getContents());
+            Bukkit.getPluginManager().callEvent(event);
+            if (!event.isCancelled())
+                inv.setContents(contents.getContents());
+            Bukkit.getPluginManager().callEvent(new AfterUpdateOpenMenuEvent(this, inv));
+        });
+    }
+    public void updateOpenMenus() {
+        this.currentlyOpenCopies.forEach(inv -> {
+            ItemStack[] newContents = contents.apply((Player) inv.getViewers().get(0));
+            BeforeUpdateOpenMenuEvent event = new BeforeUpdateOpenMenuEvent(this, inv, newContents);
+            Bukkit.getPluginManager().callEvent(event);
+            if (!event.isCancelled())
+                inv.setContents(newContents);
+            Bukkit.getPluginManager().callEvent(new AfterUpdateOpenMenuEvent(this, inv));
+        });
+    }
+    protected void saveToFile(Inventory contents, Player player, boolean saveToDisk) {
+        this.saveFile.set("menu-saves." + GUIName + "." + Utils.getPlayerUUID(player.getName()), contents.getContents());
+        if (saveToDisk)
+            this.saveFile.saveConfig();
+    }
+    public ItemStack[] getSavedMenu(Player player) {
+        Object save = this.saveFile.get("menu-saves." + this.GUIName + "." + Utils.getPlayerUUID(player.getName()));
         return Utils.getCollectionOfItems(save);
     }
-    public static void resetPlayerSave(Player player, String GUIName) {
-        AnotherGUIPlugin.getStorage().set("menu-saves." + GUIName + "." + Utils.getPlayerUUID(player.getName()), null);
-        AnotherGUIPlugin.getStorage().saveConfig();
+    @Deprecated
+    public static ItemStack[] getSavedMenu(Player player, YamlFile saveFile, String GUIName) {
+        if (saveFile == null)
+            saveFile = AnotherGUIPlugin.getStorage();
+        Object save = saveFile.get("menu-saves." + GUIName + "." + Utils.getPlayerUUID(player.getName()));
+        return Utils.getCollectionOfItems(save);
+    }
+    public void resetPlayerSave(String playerName) {
+        this.saveFile.set("menu-saves." + GUIName + "." + Utils.getPlayerUUID(playerName), null);
+        this.saveFile.saveConfig();
+    }
+    @Deprecated
+    public static void resetPlayerSave(String playerName, YamlFile saveFile, String GUIName) {
+        if (saveFile == null)
+            saveFile = AnotherGUIPlugin.getStorage();
+        saveFile.set("menu-saves." + GUIName + "." + Utils.getPlayerUUID(playerName), null);
+        saveFile.saveConfig();
     }
     public void resetSavedContents() {
-        AnotherGUIPlugin.getStorage().set("menu-saves." + GUIName, null);
-        AnotherGUIPlugin.getStorage().saveConfig();
+        this.saveFile.set("menu-saves." + GUIName, null);
+        this.saveFile.saveConfig();
     }
-    public static void getSavedMenuAsyncCallback(Player player, String GUIName, Callback<ItemStack[]> callback) {
+    @Deprecated
+    public static void resetSavedContents(YamlFile saveFile, String GUIName) {
+        if (saveFile == null)
+            saveFile = AnotherGUIPlugin.getStorage();
+        saveFile.set("menu-saves." + GUIName, null);
+        saveFile.saveConfig();
+    }
+    public void getSavedMenuAsyncCallback(Player player, Callback<ItemStack[]> callback) {
         Bukkit.getScheduler().runTaskAsynchronously(AnotherGUIPlugin.plugin, () -> {
-            ItemStack[] items = getSavedMenu(player, GUIName);
+            ItemStack[] items = getSavedMenu(player);
+            Bukkit.getScheduler().runTask(AnotherGUIPlugin.plugin, () -> callback.onQueryDone(items));
+        });
+    }
+    @Deprecated
+    public static void getSavedMenuAsyncCallback(Player player, YamlFile saveFile, String GUIName, Callback<ItemStack[]> callback) {
+        Bukkit.getScheduler().runTaskAsynchronously(AnotherGUIPlugin.plugin, () -> {
+            ItemStack[] items = getSavedMenu(player, saveFile, GUIName);
             Bukkit.getScheduler().runTask(AnotherGUIPlugin.plugin, () -> callback.onQueryDone(items));
         });
     }
@@ -265,7 +354,7 @@ public class InventoryMenu implements Menu<Inventory>, InventoryHolder {
                     e.setCancelled(true);
                 } else //save contents must be done on next server tick
                     Bukkit.getScheduler().runTask(AnotherGUIPlugin.plugin,
-                            () -> inv.save(e.getInventory(), e.getWhoClicked(), false));
+                            () -> inv.save(e.getInventory(), (Player) e.getWhoClicked(), false));
                 if (inv.onClickBehaviour != null)
                     inv.onClickBehaviour.accept(e);
             }
@@ -279,7 +368,7 @@ public class InventoryMenu implements Menu<Inventory>, InventoryHolder {
                 if (inv.onCloseBehaviour != null)
                     inv.onCloseBehaviour.accept(e);
                 inv.currentlyOpenCopies.remove(e.getInventory());
-                inv.save(e.getInventory(), e.getPlayer(), true);
+                inv.save(e.getInventory(), (Player) e.getPlayer(), true);
                 if (inv.invType == InventoryType.ANVIL) {
                     e.getInventory().setItem(0, new ItemStack(Material.AIR));
                     e.getInventory().setItem(1, new ItemStack(Material.AIR));
@@ -287,6 +376,18 @@ public class InventoryMenu implements Menu<Inventory>, InventoryHolder {
                 if (inv.parent != null)
                     Menu.openMenuOneTickLater((Player) e.getPlayer(), inv.parent, false);
             }
+        }
+        @EventHandler
+        public void beforeUpdateContents(BeforeUpdateOpenMenuEvent e) {
+            InventoryMenu inventoryMenu = e.getFrom();
+            if (inventoryMenu.beforeUpdateContents != null)
+                inventoryMenu.beforeUpdateContents.accept(e);
+        }
+        @EventHandler
+        public void afterUpdateContents(AfterUpdateOpenMenuEvent e) {
+            InventoryMenu inventoryMenu = e.getFrom();
+            if (inventoryMenu.afterUpdateContents != null)
+                inventoryMenu.afterUpdateContents.accept(e);
         }
     }
 }

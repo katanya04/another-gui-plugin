@@ -1,5 +1,6 @@
 package me.katanya04.anotherguiplugin.actionItems;
 
+import me.katanya04.anotherguiplugin.events.ActionItemInteractEvent;
 import me.katanya04.anotherguiplugin.menu.InventoryMenu;
 import me.katanya04.anotherguiplugin.utils.Utils;
 import org.bukkit.Bukkit;
@@ -22,10 +23,10 @@ import java.util.function.Function;
  * All instances of this class are stored on a map, so rather than creating multiple, similar ActionItems, it's for the best
  * to create an ActionItem whose itemConstructorFn function is flexible enough to cover all posible cases.
  */
-public class ActionItem {
-    public static final Map<String, ActionItem> actionItems = new HashMap<>();
+public class ActionItem<T> {
+    public static final Map<String, ActionItem<?>> actionItems = new HashMap<>();
     public static final String nameKeyString = "ActionItemName";
-    protected Function<Player, ItemStack> itemConstructorFn;
+    protected Function<T, ItemStack> itemConstructorFn;
     protected Consumer<ActionItemInteractEvent> onInteract;
     protected Consumer<PlayerDropItemEvent> onThrowBehaviour;
     private final String name;
@@ -33,7 +34,7 @@ public class ActionItem {
     public ActionItem(ItemStack itemStack, Consumer<ActionItemInteractEvent> onInteract, String uniqueName) {
         this(pl -> itemStack, onInteract, uniqueName);
     }
-    public ActionItem(Function<Player, ItemStack> itemStack, Consumer<ActionItemInteractEvent> onInteract, String uniqueName) {
+    public ActionItem(Function<T, ItemStack> itemStack, Consumer<ActionItemInteractEvent> onInteract, String uniqueName) {
         this.itemConstructorFn = itemStack;
         this.name = uniqueName;
         this.onInteract = onInteract;
@@ -41,7 +42,7 @@ public class ActionItem {
             throw new RuntimeException("Action item with this name already exists");
         actionItems.put(name, this);
     }
-    public ActionItem (ActionItem copyFrom, String newUniqueName) {
+    public ActionItem(ActionItem<T> copyFrom, String newUniqueName) {
         this(copyFrom.itemConstructorFn, copyFrom.onInteract, newUniqueName);
         this.onThrowBehaviour = copyFrom.onThrowBehaviour;
         this.parent = copyFrom.parent;
@@ -51,11 +52,11 @@ public class ActionItem {
         actionItems.remove(name);
     }
 
-    public static ActionItem getByName(String name) {
-        return actionItems.get(name);
+    public static ActionItem<Object> getByName(String name) {
+        return (ActionItem) actionItems.get(name);
     }
 
-    public void setItemConstructorFn(Function<Player, ItemStack> itemConstructorFn) {
+    public void setItemConstructorFn(Function<T, ItemStack> itemConstructorFn) {
         this.itemConstructorFn = itemConstructorFn;
     }
 
@@ -71,7 +72,7 @@ public class ActionItem {
         return toItemStack(null);
     }
 
-    public ItemStack toItemStack(Player arg) {
+    public ItemStack toItemStack(T arg) {
         ItemStack toret = itemConstructorFn.apply(arg);
         return toret == null || toret.getType() == Material.AIR ? null : Utils.setItemNBT(toret, nameKeyString, this.name);
     }
@@ -96,8 +97,8 @@ public class ActionItem {
         return isActionItem(itemStack) && getName(itemStack).equals(this.name);
     }
 
-    public static ActionItem getActionItem(ItemStack itemStack) {
-        return actionItems.get(ActionItem.getName(itemStack));
+    public static ActionItem<Object> getActionItem(ItemStack itemStack) {
+        return getByName(ActionItem.getName(itemStack));
     }
 
     public InventoryMenu getParent() {
@@ -111,7 +112,7 @@ public class ActionItem {
     public static class EventListener implements Listener {
         @EventHandler
         public void onInteract(PlayerInteractEvent e) {
-            ActionItem actionItem = ActionItem.getActionItem(e.getItem());
+            ActionItem<Object> actionItem = ActionItem.getActionItem(e.getItem());
             if (actionItem == null)
                 return;
             actionItem.setParent(null);
@@ -122,7 +123,7 @@ public class ActionItem {
 
         @EventHandler
         public void onClickInventory(InventoryClickEvent e) {
-            ActionItem actionItem = ActionItem.getActionItem(e.getCurrentItem());
+            ActionItem<Object> actionItem = ActionItem.getActionItem(e.getCurrentItem());
             if (actionItem == null)
                 return;
             if (e.getClickedInventory().getHolder() instanceof InventoryMenu)
@@ -134,7 +135,7 @@ public class ActionItem {
 
         @EventHandler
         public void onThrow(PlayerDropItemEvent e) {
-            ActionItem actionItem = ActionItem.getActionItem(e.getItemDrop().getItemStack());
+            ActionItem<Object> actionItem = ActionItem.getActionItem(e.getItemDrop().getItemStack());
             if (actionItem != null && actionItem.onThrowBehaviour != null)
                 actionItem.onThrowBehaviour.accept(e);
         }

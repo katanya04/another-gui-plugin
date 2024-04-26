@@ -42,7 +42,7 @@ public class BookMenu<T> implements Menu<BookMenu.Field> {
     protected Function<Player, T> toCacheKey;
     protected Function<T, Field> generateContents;
     protected LinkedHashMap<T, Field> contentsCache;
-    protected int cacheMaxSize;
+    public int cacheMaxSize;
     protected BiFunction<TextComponent, ActionType, TextComponent[]> hoverFunction;
     protected int id;
     protected int spacesPerIndentationLevel;
@@ -67,10 +67,6 @@ public class BookMenu<T> implements Menu<BookMenu.Field> {
 
         //default implementation
         this.hoverFunction = (text, action) -> new TextComponent[]{new TextComponent("Click to " + action.name().toLowerCase())};
-    }
-
-    public void setCacheMaxSize(int cacheMaxSize) {
-        this.cacheMaxSize = cacheMaxSize;
     }
 
     public static BookMenu<?> getBookById(int id) {
@@ -528,7 +524,7 @@ public class BookMenu<T> implements Menu<BookMenu.Field> {
         }
 
         public InventoryField(int slots, String name) {
-            this(new ChestMenu(name, new ItemStack[slots], true, InventoryMenu.SaveOption.GLOBAL, null, null));
+            this(new ChestMenu(name, new ItemStack[slots], true, InventoryMenu.SaveOption.GLOBAL, false));
             ((ChestMenu) this.invMenu).setFillWithBarriers(true);
         }
 
@@ -564,7 +560,7 @@ public class BookMenu<T> implements Menu<BookMenu.Field> {
             ItemStack[] items = Utils.getCollectionOfItems(itemsObj);
             if (items == null)
                 items = new ItemStack[0];
-            ChestMenu menu = new ChestMenu(name, items, true, InventoryMenu.SaveOption.GLOBAL, null, null);
+            ChestMenu menu = new ChestMenu(name, items, true, InventoryMenu.SaveOption.GLOBAL, false);
             menu.setFillWithBarriers(true);
             InventoryField invField = new InventoryField(menu);
             menu.setOnCloseBehaviour(event -> invField.triggerUpdate());

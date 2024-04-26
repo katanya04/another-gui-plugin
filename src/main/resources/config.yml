@@ -1,2 +1,7 @@
 player-uuid-cache-settings:
-  max-size-entries: 300
+  max-size-entries: 100
+  add-to-cache-on-join: true
+
+player-head-cache-settings:
+  max-size-entries: 100
+  add-to-cache-on-join: true

@@ -1,7 +1,7 @@
 package me.katanya04.anotherguiplugin.actionItems;
 
+import me.katanya04.anotherguiplugin.events.ActionItemInteractEvent;
 import me.katanya04.anotherguiplugin.utils.Utils;
-import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 
 import java.util.ArrayList;
@@ -14,14 +14,14 @@ import java.util.function.Function;
  * A build-in type of ActionItem that when interacted scrolls to the next object of a list.
  * The index is stored on the ItemStack representation of the ListItem
  */
-public class ListItem extends ActionItem {
+public class ListItem<T> extends ActionItem<T> {
     private final List<String> list;
-    Function<Player, Integer> initialIndex;
+    Function<T, Integer> initialIndex;
     protected final boolean nullOption;
-    public ListItem(ItemStack itemStack, List<String> list, Function<Player, Integer> initialIndex, boolean nullOption, String name) {
+    public ListItem(ItemStack itemStack, List<String> list, Function<T, Integer> initialIndex, boolean nullOption, String name) {
         this(pl -> itemStack, list, initialIndex, nullOption, name);
     }
-    public ListItem(Function<Player, ItemStack> itemStack, List<String> list, Function<Player, Integer> initialIndex, boolean nullOption, String name) {
+    public ListItem(Function<T, ItemStack> itemStack, List<String> list, Function<T, Integer> initialIndex, boolean nullOption, String name) {
         super(itemStack, null, name);
         this.list = new ArrayList<>(new LinkedHashSet<>(list));
         this.initialIndex = initialIndex;
@@ -50,7 +50,7 @@ public class ListItem extends ActionItem {
             index++;
         Utils.setLore(item, "§r§f" + getName(index));
     }
-    public void setInitialIndex(Function<Player, Integer> initialIndex) {
+    public void setInitialIndex(Function<T, Integer> initialIndex) {
         this.initialIndex = initialIndex;
     }
     @Override
@@ -59,7 +59,7 @@ public class ListItem extends ActionItem {
         this.onInteract = increaseIndex.andThen(onInteract);
     }
     @Override
-    public ItemStack toItemStack(Player arg) {
+    public ItemStack toItemStack(T arg) {
         ItemStack item = super.toItemStack(arg);
         int index = initialIndex.apply(arg);
         Utils.setLore(item, "§r§f" + getName(index));

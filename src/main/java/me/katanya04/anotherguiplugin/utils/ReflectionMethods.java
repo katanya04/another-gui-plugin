@@ -1,5 +1,6 @@
 package me.katanya04.anotherguiplugin.utils;
 
+import com.mojang.authlib.GameProfile;
 import me.katanya04.anotherguiplugin.AnotherGUIPlugin;
 import net.md_5.bungee.api.chat.TextComponent;
 import net.md_5.bungee.chat.ComponentSerializer;
@@ -12,14 +13,12 @@ import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.inventory.InventoryView;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.BookMeta;
+import org.bukkit.inventory.meta.SkullMeta;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 import java.util.logging.Level;
 
 /**
@@ -44,6 +43,17 @@ public class ReflectionMethods {
         } catch (ClassNotFoundException var3) {
             AnotherGUIPlugin.getLog().log(Level.SEVERE, "Bukkit class not found \"" + name + "\"");
             return null;
+        }
+    }
+
+    private static void setField(Object change, String name, Object to) {
+        try {
+            Field field = change.getClass().getDeclaredField(name);
+            field.setAccessible(true);
+            field.set(change, to);
+            field.setAccessible(false);
+        } catch (Exception e) {
+            AnotherGUIPlugin.getLog().log(Level.SEVERE, "Error while changing the value of the field " + name + " in " + change.getClass(), e);
         }
     }
     private static Class<?> CraftPlayer;
@@ -81,6 +91,8 @@ public class ReflectionMethods {
     private static Field activeContainer;
     private static Method addSlotListener;
     private static Method getBukkitView;
+    private static Class<?> CraftMetaSkull;
+    private static Field profile;
 
     public static void cacheObjects() throws NoSuchMethodException, NoSuchFieldException {
         CraftPlayer = getBukkitClass("CraftPlayer", "entity");
@@ -123,6 +135,8 @@ public class ReflectionMethods {
         activeContainer = EntityPlayer.getField("activeContainer");
         addSlotListener = Container.getMethod("addSlotListener", getNMSClass("ICrafting"));
         getBukkitView = ContainerAnvil.getMethod("getBukkitView");
+        CraftMetaSkull = getBukkitClass("CraftMetaSkull", "inventory");
+        profile = CraftMetaSkull.getDeclaredField("profile");
     }
 
     public static void openBook(Player p, ItemStack book) { //thx to Juancomaster1998 :)
@@ -206,5 +220,26 @@ public class ReflectionMethods {
             AnotherGUIPlugin.getLog().log(Level.SEVERE, "Error while trying to open an anvil menu");
             ex.printStackTrace();
         }
+    }
+
+    public static void setProfileToMeta(SkullMeta meta, GameProfile profile) {
+        try {
+            setField(meta, "profile", profile);
+        } catch (Exception e) {
+            AnotherGUIPlugin.getLog().log(Level.SEVERE, "Exception while getting player head with texture", e);
+        }
+    }
+
+    public static GameProfile getProfileFromMeta(SkullMeta meta) {
+        Object craftMeta = CraftMetaSkull.cast(meta);
+        profile.setAccessible(true);
+        GameProfile profileToret = null;
+        try {
+            profileToret = (GameProfile) profile.get(craftMeta);
+        } catch (Exception e) {
+            AnotherGUIPlugin.getLog().log(Level.SEVERE, "Exception while getting GameProfile from SkullMeta", e);
+        }
+        profile.setAccessible(false);
+        return profileToret;
     }
 }

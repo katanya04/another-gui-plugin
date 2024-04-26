@@ -14,6 +14,7 @@ import org.bukkit.map.MinecraftFont;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
+import java.net.URL;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
@@ -307,6 +308,16 @@ public class Utils {
                 itemOnCursor.setAmount(amount);
                 event.getPlayer().setItemOnCursor(itemOnCursor);
             }
+        }
+    }
+
+    public static boolean isValidURL(String url) {
+        try {
+            URL url1 = new URL(url);
+            url1.toURI();
+            return true;
+        } catch (Exception ex) {
+            return false;
         }
     }
 }

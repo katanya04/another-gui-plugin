@@ -11,7 +11,7 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.logging.Level;
 
-public class Config extends YamlConfiguration {
+public class Config extends YamlConfiguration implements YamlFile {
     private final String name;
     private final File file;
     public Config(String nameFile) {
@@ -20,7 +20,7 @@ public class Config extends YamlConfiguration {
         saveDefaultConfig();
     }
 
-    private void saveDefaultConfig() {
+    public void saveDefaultConfig() {
         if (!this.file.exists()) {
             try {
                 Files.createDirectories(Paths.get(AnotherGUIPlugin.plugin.getDataFolder().getPath()));
@@ -33,7 +33,7 @@ public class Config extends YamlConfiguration {
         loadConfig();
     }
 
-    private void loadConfig() {
+    public void loadConfig() {
         try {
             load(file);
         } catch (IOException | InvalidConfigurationException e) {
