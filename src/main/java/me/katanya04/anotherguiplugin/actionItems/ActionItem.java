@@ -22,6 +22,7 @@ import java.util.function.Function;
  * The items have a nbt tag to easily know if an ItemStack was created by an ActionItem.
  * All instances of this class are stored on a map, so rather than creating multiple, similar ActionItems, it's for the best
  * to create an ActionItem whose itemConstructorFn function is flexible enough to cover all posible cases.
+ * @param <T> the class of the argument used to parse the ActionItem to a ItemStack
  */
 public class ActionItem<T> {
     public static final Map<String, ActionItem<?>> actionItems = new HashMap<>();
