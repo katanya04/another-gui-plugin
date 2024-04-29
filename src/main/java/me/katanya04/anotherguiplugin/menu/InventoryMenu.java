@@ -81,10 +81,12 @@ public class InventoryMenu implements Menu<Inventory>, InventoryHolder {
         this.GUIName = GUIName;
     }
 
+    @Override
     public void setParent(Menu<?> parent) {
         this.parent = parent;
     }
 
+    @Override
     public Menu<?> getParent() {
         return parent;
     }
@@ -246,7 +248,8 @@ public class InventoryMenu implements Menu<Inventory>, InventoryHolder {
                 globalSave(contents, player);
                 break;
             case INDIVIDUAL:
-                saveToFile(contents, player, saveToDisk);
+                if (saveToDisk)
+                    saveToFile(contents, player);
         }
     }
     protected void globalSave(Inventory contents, Player player) {
@@ -272,10 +275,9 @@ public class InventoryMenu implements Menu<Inventory>, InventoryHolder {
             Bukkit.getPluginManager().callEvent(new AfterUpdateOpenMenuEvent(this, inv));
         });
     }
-    protected void saveToFile(Inventory contents, Player player, boolean saveToDisk) {
-        this.saveFile.set("menu-saves." + GUIName + "." + Utils.getPlayerUUID(player.getName()), contents.getContents());
-        if (saveToDisk)
-            this.saveFile.saveConfig();
+    protected void saveToFile(Inventory contents, Player player) {
+        this.saveFile.set("menu-saves." + GUIName + "." + Utils.getPlayerUUID(player.getName()), contents.getContents().clone());
+        this.saveFile.saveConfig();
     }
     public ItemStack[] getSavedMenu(Player player) {
         Object save = this.saveFile.get("menu-saves." + this.GUIName + "." + Utils.getPlayerUUID(player.getName()));
@@ -345,10 +347,10 @@ public class InventoryMenu implements Menu<Inventory>, InventoryHolder {
         }
         @EventHandler
         public void onInventoryClick(InventoryClickEvent e) {
-            if (e.getClickedInventory() != null && e.getInventory().getHolder() instanceof InventoryMenu) {
+            if (e.getInventory() != null && e.getInventory().getHolder() instanceof InventoryMenu) {
                 InventoryMenu inv = ((InventoryMenu) e.getInventory().getHolder());
-                if (((!inv.canInteract || inv.protectedSlots.contains(e.getSlot())) && e.getClickedInventory().equals(e.getInventory())) ||
-                        (e.getClick().isShiftClick() && !e.getClickedInventory().equals(e.getInventory()) && (!inv.canInteract || Utils.shareRepeatedValue(
+                if (((!inv.canInteract || inv.protectedSlots.contains(e.getSlot())) && Objects.equals(e.getClickedInventory(), e.getInventory())) ||
+                        (e.getClick().isShiftClick() && !Objects.equals(e.getClickedInventory(), e.getInventory()) && (!inv.canInteract || Utils.shareRepeatedValue(
                                 Utils.findSlots(e.getInventory(), e.getCurrentItem(), e.getCurrentItem().getAmount()), inv.protectedSlots)))
                 ) {
                     e.setCancelled(true);

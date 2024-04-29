@@ -141,6 +141,14 @@ public class BookMenu<T> implements Menu<BookMenu.Field> {
         return contents;
     }
 
+    @Override
+    public void setParent(Menu<?> parent) {}
+
+    @Override
+    public Menu<?> getParent() {
+        return null;
+    }
+
     protected ItemStack getBook(Player player) {
         Field contents = getContentsFromPlayer(player);
         return ReflectionMethods.getBook(buildPagesFromField(contents, contents.getId()));
@@ -256,6 +264,7 @@ public class BookMenu<T> implements Menu<BookMenu.Field> {
         private Consumer<Field> onModifyChildrenValue;
         private Field childTemplate;
         private boolean shouldUseCache;
+        private boolean openMenuOnCreate;
         private static final String FIELD_PATH = "FieldPath";
         private static final AnvilMenu anvilMenu = new AnvilMenu("anvilMenu", false, InventoryMenu.SaveOption.NONE, null, null);
 
@@ -273,6 +282,8 @@ public class BookMenu<T> implements Menu<BookMenu.Field> {
                     return;
                 Field field = book.getContentsFromPlayer((Player) event.getWhoClicked(), true).getNodeFromPath(path.split("/")[1]);
                 if (event.getRawSlot() == 2) {
+                    if (event.getClickedInventory().getItem(2) == null)
+                        return;
                     String value = event.getClickedInventory().getItem(2).getItemMeta().getDisplayName();
                     if (field.validCheckFunction == null || field.checkIfValid(value)) {
                         field.setValue(value);
@@ -307,6 +318,7 @@ public class BookMenu<T> implements Menu<BookMenu.Field> {
             this(value, false, false);
             this.onModifyValue = onModifyValue;
             this.validCheckFunction = validCheckFunction;
+            this.openMenuOnCreate = true;
         }
 
         public Field(String value, boolean removableFromBook, boolean canAddMoreFields) {
@@ -325,6 +337,7 @@ public class BookMenu<T> implements Menu<BookMenu.Field> {
             this.modifyPermission = permission;
             this.isModifiable = ModifiableOption.ONLY_IF_LEAF;
             this.shouldUseCache = true;
+            this.openMenuOnCreate = true;
         }
 
         public Field(Field field) {
@@ -341,6 +354,7 @@ public class BookMenu<T> implements Menu<BookMenu.Field> {
             this.shouldUseCache = field.shouldUseCache;
             this.onAddChildren = field.onAddChildren;
             this.onRemoveChildren = field.onRemoveChildren;
+            this.openMenuOnCreate = field.openMenuOnCreate;
             recursiveCopyChildren(this, field);
         }
 
@@ -398,6 +412,14 @@ public class BookMenu<T> implements Menu<BookMenu.Field> {
 
         public Consumer<Field> getOnRemoveChildren() {
             return onRemoveChildren;
+        }
+
+        public boolean isOpenMenuOnCreate() {
+            return openMenuOnCreate;
+        }
+
+        public void setOpenMenuOnCreate(boolean openMenuOnCreate) {
+            this.openMenuOnCreate = openMenuOnCreate;
         }
 
         public void setOnRemoveChildren(Consumer<Field> onRemoveChildren) {
@@ -614,21 +636,24 @@ public class BookMenu<T> implements Menu<BookMenu.Field> {
         }
 
         public static ConfigField fromConfig(ConfigurationSection config) {
-            ConfigField root = fromConfig_(config);
-            root.setOnModifyChildrenValue(field -> root.toConfig(config));
+            ConfigField root = new ConfigField(config.getName());
             root.setShouldUseCache(false);
             root.isRoot = true;
             root.configurationSection = config;
+            root.updateStructure();
+            root.setOnModifyChildrenValue(field -> root.toConfig(config));
             return root;
         }
 
-        private static ConfigField fromConfig_(ConfigurationSection config) {
-            ConfigField root = new ConfigField(config.getName());
-            for (Map.Entry<String, Object> entry : config.getValues(false).entrySet()) {
+        public void updateStructure() {
+            this.clear();
+            for (Map.Entry<String, Object> entry : this.configurationSection.getValues(false).entrySet()) {
                 ConfigField currentEntry;
                 if (entry.getValue() instanceof ConfigurationSection) {
                     ConfigurationSection value = (ConfigurationSection) entry.getValue();
-                    currentEntry = fromConfig_(value);
+                    currentEntry = new ConfigField(value.getName());
+                    currentEntry.configurationSection = value;
+                    currentEntry.updateStructure();
                 } else if (Utils.getCollectionOfItems(entry.getValue()) != null) {
                     currentEntry = new ConfigField(entry.getKey());
                     currentEntry.addChild(InventoryField.fromConfig(entry.getKey(), entry.getValue()));
@@ -647,9 +672,8 @@ public class BookMenu<T> implements Menu<BookMenu.Field> {
                     currentEntry = new ConfigField(entry.getKey());
                     currentEntry.addChild(new ConfigField(entry.getValue().toString()));
                 }
-                root.addChild(currentEntry);
+                this.addChild(currentEntry);
             }
-            return root;
         }
 
         public ConfigurationSection toConfig(ConfigurationSection config) {
@@ -679,8 +703,29 @@ public class BookMenu<T> implements Menu<BookMenu.Field> {
                         config.set(path, list);
                     }
                 } else if (node instanceof ConfigField)
-                    ((ConfigField) node).toConfig(config, path + "." + node.getData());
+                    ((ConfigField) node).toConfig(config, path.isEmpty() ? node.getData() : path + "." + node.getData());
             }
+        }
+
+        public Field getChild(String path) {
+            String[] pathSplit = path.split("\\.");
+            Field field = this;
+            for (String s : pathSplit) {
+                field = field.getFirstChildGivenData(s);
+                if (field == null)
+                    return null;
+            }
+            return field;
+        }
+
+        public Field getChildCreateIfNotExists(String path, String defaultValue) {
+            Field child = this.getChild(path);
+            if (child == null) {
+                configurationSection.set(path, defaultValue);
+                this.updateStructure();
+                child = this.getChild(path);
+            }
+            return child;
         }
     }
 
@@ -725,7 +770,10 @@ public class BookMenu<T> implements Menu<BookMenu.Field> {
                 case MODIFY:
                     InventoryMenu invMenu = field.getMenu(String.valueOf(id));
                     invMenu.setParent(book);
-                    invMenu.openMenu(player);
+                    if (action != ActionType.ADD || field.isOpenMenuOnCreate())
+                        invMenu.openMenu(player);
+                    else
+                        book.openMenu(player);
                     break;
             }
             return false;

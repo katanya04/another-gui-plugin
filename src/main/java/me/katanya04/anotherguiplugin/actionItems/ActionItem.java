@@ -127,8 +127,12 @@ public class ActionItem<T> {
             ActionItem<Object> actionItem = ActionItem.getActionItem(e.getCurrentItem());
             if (actionItem == null)
                 return;
-            if (e.getClickedInventory().getHolder() instanceof InventoryMenu)
-                actionItem.setParent((InventoryMenu) e.getClickedInventory().getHolder());
+            if (e.getClickedInventory().getHolder() instanceof InventoryMenu) {
+                InventoryMenu invMenu = (InventoryMenu) e.getClickedInventory().getHolder();
+                actionItem.setParent(invMenu);
+                if (actionItem instanceof MenuItem)
+                    ((MenuItem<?, ?>) actionItem).getMenu().setParent(invMenu);
+            }
             e.setCancelled(true);
             Bukkit.getPluginManager().callEvent(new ActionItemInteractEvent((Player) e.getWhoClicked(), actionItem,
                     e.getCurrentItem(), e.getClickedInventory(), e.getClick()));

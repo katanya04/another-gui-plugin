@@ -243,11 +243,10 @@ public class ChestMenu extends InventoryMenu {
     }
 
     @Override
-    protected void saveToFile(Inventory contents, Player player, boolean saveToDisk) {
+    protected void saveToFile(Inventory contents, Player player) {
         ItemStack[] allContents = updateAPageFromContents(contents, player);
-        this.saveFile.set("menu-saves." + GUIName + "." + Utils.getPlayerUUID(player.getName()), allContents);
-        if (saveToDisk)
-            this.saveFile.saveConfig();
+        this.saveFile.set("menu-saves." + GUIName + "." + Utils.getPlayerUUID(player.getName()), allContents.clone());
+        this.saveFile.saveConfig();
     }
 
     public ItemStack[] getWithoutUIElements(Inventory contents) {

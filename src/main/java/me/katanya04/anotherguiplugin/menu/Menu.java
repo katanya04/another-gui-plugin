@@ -19,9 +19,11 @@ public interface Menu<T> {
         (new BukkitRunnable() {
             @Override
             public void run() {
-                if (!player.isInsideVehicle())
+                if (!player.isInsideVehicle() && player.isOnline())
                     invMenu.openMenu(player);
             }
         }).runTaskLater(AnotherGUIPlugin.plugin, 1L);
     }
+    void setParent(Menu<?> parent);
+    public Menu<?> getParent();
 }
