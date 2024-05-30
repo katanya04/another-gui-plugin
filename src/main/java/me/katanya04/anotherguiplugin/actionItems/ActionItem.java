@@ -2,7 +2,7 @@ package me.katanya04.anotherguiplugin.actionItems;
 
 import me.katanya04.anotherguiplugin.events.ActionItemInteractEvent;
 import me.katanya04.anotherguiplugin.menu.InventoryMenu;
-import me.katanya04.anotherguiplugin.utils.Utils;
+import me.katanya04.anotherguiplugin.utils.ReflectionMethods;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
@@ -75,23 +75,23 @@ public class ActionItem<T> {
 
     public ItemStack toItemStack(T arg) {
         ItemStack toret = itemConstructorFn.apply(arg);
-        return toret == null || toret.getType() == Material.AIR ? null : Utils.setItemNBT(toret, nameKeyString, this.name);
+        return toret == null || toret.getType() == Material.AIR ? null : ReflectionMethods.setItemNBT(toret, nameKeyString, this.name);
     }
 
     public ItemStack convertToActionItem(ItemStack item) {
-        return Utils.setItemNBT(item.clone(), nameKeyString, this.name);
+        return ReflectionMethods.setItemNBT(item.clone(), nameKeyString, this.name);
     }
 
     public ItemStack returnPlaceholder() {
-        return Utils.setItemNBT(new ItemStack(Material.PAPER), nameKeyString, this.name);
+        return ReflectionMethods.setItemNBT(new ItemStack(Material.PAPER), nameKeyString, this.name);
     }
 
     protected static String getName(ItemStack itemStack) {
-        return Utils.getNBT(itemStack, nameKeyString);
+        return ReflectionMethods.getNBT(itemStack, nameKeyString);
     }
 
     public static boolean isActionItem(ItemStack itemStack) {
-        return Utils.containsNBT(itemStack, nameKeyString);
+        return ReflectionMethods.containsNBT(itemStack, nameKeyString);
     }
 
     public boolean isThisActionItem(ItemStack itemStack) {

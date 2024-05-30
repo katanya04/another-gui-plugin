@@ -26,8 +26,12 @@ import java.util.logging.Level;
  */
 public class ReflectionMethods {
     private ReflectionMethods() {}
+    private static final String version;
+    static {
+        String[] versionSplit = Bukkit.getServer().getClass().getPackage().getName().split("\\.");
+        version = versionSplit[versionSplit.length - 1];
+    }
     private static Class<?> getNMSClass(String name) {
-        String version = Bukkit.getServer().getClass().getPackage().getName().split("\\.")[3];
         try {
             return Class.forName("net.minecraft.server." + version + "." + name);
         } catch (ClassNotFoundException var3) {
@@ -37,7 +41,6 @@ public class ReflectionMethods {
     }
 
     private static Class<?> getBukkitClass(String name, String packet) {
-        String version = Bukkit.getServer().getClass().getPackage().getName().split("\\.")[3];
         try {
             return Class.forName("org.bukkit.craftbukkit." + version + "." + packet + "." + name);
         } catch (ClassNotFoundException var3) {
@@ -93,6 +96,17 @@ public class ReflectionMethods {
     private static Method getBukkitView;
     private static Class<?> CraftMetaSkull;
     private static Field profile;
+    private static Class<?> NBTTagCompound;
+    private static Method hasTag;
+    private static Method getTag;
+    private static Constructor<?> NBTTagCompoundConstructor;
+    private static Method setString;
+    private static Method setTag;
+    private static Method asBukkitCopy;
+    private static Method hasKey;
+    private static Method get;
+    private static Class<?> NBTTagString;
+    private static Method asString;
 
     public static void cacheObjects() throws NoSuchMethodException, NoSuchFieldException {
         CraftPlayer = getBukkitClass("CraftPlayer", "entity");
@@ -137,6 +151,23 @@ public class ReflectionMethods {
         getBukkitView = ContainerAnvil.getMethod("getBukkitView");
         CraftMetaSkull = getBukkitClass("CraftMetaSkull", "inventory");
         profile = CraftMetaSkull.getDeclaredField("profile");
+        NBTTagCompound = getNMSClass("NBTTagCompound");
+        hasTag = ItemStack.getMethod("hasTag");
+        getTag = ItemStack.getMethod("getTag");
+        NBTTagCompoundConstructor = NBTTagCompound.getConstructor();
+        setString = NBTTagCompound.getMethod("setString", String.class, String.class);
+        setTag = ItemStack.getMethod("setTag", NBTTagCompound);
+        asBukkitCopy = CraftItemStack.getMethod("asBukkitCopy", ItemStack);
+        hasKey = NBTTagCompound.getMethod("hasKey", String.class);
+        get = NBTTagCompound.getMethod("get", String.class);
+        NBTTagString = getNMSClass("NBTTagString");
+        Method temp;
+        try {
+            temp = NBTTagString.getMethod("asString");
+        } catch (NoSuchMethodException ex) {
+            temp = NBTTagString.getMethod("a_");
+        }
+        asString = temp;
     }
 
     public static void openBook(Player p, ItemStack book) { //thx to Juancomaster1998 :)
@@ -241,5 +272,48 @@ public class ReflectionMethods {
         }
         profile.setAccessible(false);
         return profileToret;
+    }
+
+    public static ItemStack setItemNBT(ItemStack item, String key, String value) {
+        try {
+            Object NMSItemVersion = asNMSCopy.invoke(null, item);
+            Object nbt = ((boolean) hasTag.invoke(NMSItemVersion)) ? getTag.invoke(NMSItemVersion) : NBTTagCompoundConstructor.newInstance();
+            setString.invoke(nbt, key, value);
+            setTag.invoke(NMSItemVersion, nbt);
+            return (ItemStack) asBukkitCopy.invoke(null, NMSItemVersion);
+        } catch (Exception ex) {
+            return null;
+        }
+    }
+
+    public static String getNBT(ItemStack item, String key) {
+        if (item == null || item.getType() == Material.AIR)
+            return null;
+        try {
+            Object NMSItemVersion = asNMSCopy.invoke(null, item);
+            if (!(boolean) hasTag.invoke(NMSItemVersion))
+                return null;
+            Object nbt = getTag.invoke(NMSItemVersion);
+            if (!(boolean) hasKey.invoke(nbt, key))
+                return null;
+            Object value = get.invoke(nbt, key);
+            return (String) asString.invoke(value);
+        } catch (Exception ex) {
+            return null;
+        }
+    }
+
+    public static boolean containsNBT(ItemStack item, String key) {
+        if (item == null || item.getType() == Material.AIR)
+            return false;
+        try {
+            Object NMSItemVersion = asNMSCopy.invoke(null, item);
+            if (!(boolean) hasTag.invoke(NMSItemVersion))
+                return false;
+            Object nbt = getTag.invoke(NMSItemVersion);
+            return (boolean) hasKey.invoke(nbt, key);
+        } catch (Exception ex) {
+            return false;
+        }
     }
 }

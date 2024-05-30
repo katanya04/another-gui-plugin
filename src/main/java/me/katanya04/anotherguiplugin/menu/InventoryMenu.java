@@ -66,11 +66,16 @@ public class InventoryMenu implements Menu<Inventory>, InventoryHolder {
     }
 
     public static ItemStack[] parseActionItemsByPlayer(ItemStack[] contents, Player player) {
+        ItemStack[] newContents = new ItemStack[contents.length];
         for (int i = 0; i < contents.length; i++) {
+            if (contents[i] == null)
+                continue;
             if (ActionItem.isActionItem(contents[i]))
-                contents[i] = ActionItem.getActionItem(contents[i]).toItemStack(player);
+                newContents[i] = ActionItem.getActionItem(contents[i]).toItemStack(player);
+            else
+                newContents[i] = contents[i].clone();
         }
-        return contents;
+        return newContents;
     }
 
     public String getGUIName() {

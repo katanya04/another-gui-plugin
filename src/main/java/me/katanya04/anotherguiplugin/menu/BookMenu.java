@@ -270,7 +270,7 @@ public class BookMenu<T> implements Menu<BookMenu.Field> {
 
         static {
             anvilMenu.setOnClickBehaviour(event -> {
-                String path = Utils.getNBT(event.getInventory().getItem(0), FIELD_PATH);
+                String path = ReflectionMethods.getNBT(event.getInventory().getItem(0), FIELD_PATH);
                 int bookId;
                 try {
                     bookId = Integer.parseInt(path.split("/")[0]);
@@ -500,7 +500,7 @@ public class BookMenu<T> implements Menu<BookMenu.Field> {
 
         public InventoryMenu getMenu(String bookID) {
             anvilMenu.setContents(new ItemStack[]{
-                    Utils.setItemNBT(Utils.setName(new ItemStack(Material.IRON_SPADE),
+                    ReflectionMethods.setItemNBT(Utils.setName(new ItemStack(Material.IRON_SPADE),
                                     this.getData().isEmpty() ? "New value" : this.getData()), Field.FIELD_PATH,
                             this.getPath(bookID)), this.getParent() != null &&
                     this.getParent().numChildren() > 1 ? Utils.setName(new ItemStack(
